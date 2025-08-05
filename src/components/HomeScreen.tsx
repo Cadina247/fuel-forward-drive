@@ -13,7 +13,8 @@ import {
   Star,
   Clock,
   MapPin,
-  Percent
+  Percent,
+  ParkingCircle
 } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -127,6 +128,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                 <div>
                   <h3 className="font-medium">Parking Zones</h3>
                   <p className="text-sm text-muted-foreground">Avoid restricted areas</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 hover:shadow-soft transition-all cursor-pointer" onClick={() => onNavigate('parking-lot')}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                  <ParkingCircle className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Parking Lot Nearby</h3>
+                  <p className="text-sm text-muted-foreground">Find available parking spots</p>
                 </div>
               </div>
             </div>

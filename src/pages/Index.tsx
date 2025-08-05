@@ -84,6 +84,13 @@ const Index = () => {
             <p className="text-muted-foreground">Parking restriction map coming soon...</p>
           </div>
         );
+      case 'parking-lot':
+        return (
+          <div className="p-4">
+            <h1 className="text-2xl font-bold mb-4">Parking Lot Nearby</h1>
+            <p className="text-muted-foreground">Finding available parking spots near you...</p>
+          </div>
+        );
       default:
         return <HomeScreen onNavigate={handleNavigate} />;
     }
