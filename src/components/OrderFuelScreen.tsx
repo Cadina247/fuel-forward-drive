@@ -19,9 +19,10 @@ import {
 interface OrderFuelScreenProps {
   onBack: () => void;
   onPlaceOrder: (orderData: any) => void;
+  onStationClick?: (stationId: string) => void;
 }
 
-const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder }) => {
+const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder, onStationClick }) => {
   const [selectedFuel, setSelectedFuel] = useState('petrol');
   const [quantity, setQuantity] = useState(20);
   const [selectedStation, setSelectedStation] = useState('shell-vi');
@@ -125,7 +126,10 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder 
                   ? 'border-primary bg-primary/5' 
                   : 'border-border hover:border-primary/50'
               }`}
-              onClick={() => setSelectedStation(station.id)}
+              onClick={() => {
+                setSelectedStation(station.id);
+                if (onStationClick) onStationClick(station.id);
+              }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">

@@ -3,6 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
 import HomeScreen from '@/components/HomeScreen';
 import OrderFuelScreen from '@/components/OrderFuelScreen';
+import StationDetailsScreen from '@/components/StationDetailsScreen';
 import TokenGeneratorScreen from '@/components/TokenGeneratorScreen';
 import EVChargingScreen from '@/components/EVChargingScreen';
 import SoftLoanScreen from '@/components/SoftLoanScreen';
@@ -11,10 +12,16 @@ import TrackOrderScreen from '@/components/TrackOrderScreen';
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState('home');
   const [activeTab, setActiveTab] = useState('home');
+  const [selectedStationId, setSelectedStationId] = useState<string>('');
   const { toast } = useToast();
 
   const handleNavigate = (screen: string) => {
     setCurrentScreen(screen);
+  };
+
+  const handleStationClick = (stationId: string) => {
+    setSelectedStationId(stationId);
+    setCurrentScreen('station-details');
   };
 
   const handleTabChange = (tab: string) => {
@@ -47,7 +54,20 @@ const Index = () => {
       case 'home':
         return <HomeScreen onNavigate={handleNavigate} />;
       case 'order-fuel':
-        return <OrderFuelScreen onBack={() => setCurrentScreen('home')} onPlaceOrder={handlePlaceOrder} />;
+        return (
+          <OrderFuelScreen 
+            onBack={() => setCurrentScreen('home')} 
+            onPlaceOrder={handlePlaceOrder}
+            onStationClick={handleStationClick}
+          />
+        );
+      case 'station-details':
+        return (
+          <StationDetailsScreen 
+            onBack={() => setCurrentScreen('order-fuel')} 
+            stationId={selectedStationId}
+          />
+        );
       case 'token-generator':
         return <TokenGeneratorScreen onBack={() => setCurrentScreen('home')} />;
       case 'ev-charging':
