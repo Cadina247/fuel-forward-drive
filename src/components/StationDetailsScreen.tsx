@@ -76,6 +76,31 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
     }
   };
 
+  const stationServices = {
+    'shell-vi': [
+      { name: 'Car Wash', icon: '🚗', available: true, hours: '7:00 AM - 8:00 PM' },
+      { name: 'Supermarket', icon: '🏪', available: true, hours: '24/7' },
+      { name: 'ATM', icon: '🏧', available: true, hours: '24/7' },
+      { name: 'Restaurant', icon: '🍽️', available: true, hours: '6:00 AM - 10:00 PM' },
+      { name: 'Toilet Facilities', icon: '🚻', available: true, hours: '24/7' }
+    ],
+    'total-lekki': [
+      { name: 'Car Wash', icon: '🚗', available: true, hours: '8:00 AM - 6:00 PM' },
+      { name: 'Mini Mart', icon: '🏪', available: true, hours: '6:00 AM - 10:00 PM' },
+      { name: 'ATM', icon: '🏧', available: false, hours: 'Out of Service' },
+      { name: 'Tire Service', icon: '🛞', available: true, hours: '8:00 AM - 6:00 PM' },
+      { name: 'Toilet Facilities', icon: '🚻', available: true, hours: '6:00 AM - 10:00 PM' }
+    ],
+    'mobil-ikeja': [
+      { name: 'Car Wash', icon: '🚗', available: true, hours: '7:00 AM - 7:00 PM' },
+      { name: 'Salon/Barber', icon: '💇', available: true, hours: '9:00 AM - 6:00 PM' },
+      { name: 'Supermarket', icon: '🏪', available: true, hours: '6:00 AM - 11:00 PM' },
+      { name: 'ATM', icon: '🏧', available: true, hours: '24/7' },
+      { name: 'Auto Repair', icon: '🔧', available: true, hours: '8:00 AM - 6:00 PM' },
+      { name: 'Toilet Facilities', icon: '🚻', available: true, hours: '6:00 AM - 11:00 PM' }
+    ]
+  };
+
   const fuelTypes = [
     { id: 'petrol', name: 'Petrol (PMS)', icon: '⛽', unit: 'L' },
     { id: 'diesel', name: 'Diesel (AGO)', icon: '🚛', unit: 'L' },
@@ -85,6 +110,7 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
 
   const station = stations[stationId as keyof typeof stations];
   const availability = fuelAvailability[stationId as keyof typeof fuelAvailability];
+  const services = stationServices[stationId as keyof typeof stationServices];
 
   const getStockColor = (stock: string) => {
     switch (stock) {
@@ -191,6 +217,43 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
               </Card>
             );
           })}
+        </div>
+      </div>
+
+      {/* Other Services */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">Other Services</h2>
+        <div className="space-y-3">
+          {services.map((service, index) => (
+            <Card key={index} className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl">{service.icon}</div>
+                  <div>
+                    <h3 className="font-medium">{service.name}</h3>
+                    <p className="text-sm text-muted-foreground">{service.hours}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {service.available ? (
+                    <>
+                      <Badge variant="secondary" className="text-green-600 border-green-200">
+                        Available
+                      </Badge>
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    </>
+                  ) : (
+                    <>
+                      <Badge variant="secondary" className="text-red-600 border-red-200">
+                        Unavailable
+                      </Badge>
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    </>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
       </div>
 
