@@ -19,9 +19,10 @@ import {
 interface StationDetailsScreenProps {
   onBack: () => void;
   stationId?: string;
+  onNavigate?: (screen: string) => void;
 }
 
-const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, stationId = 'shell-vi' }) => {
+const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, stationId = 'shell-vi', onNavigate }) => {
   const stations = {
     'shell-vi': {
       name: 'Shell - Victoria Island',
@@ -82,6 +83,7 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
       { name: 'Supermarket', icon: '🏪', available: true, hours: '24/7' },
       { name: 'ATM', icon: '🏧', available: true, hours: '24/7' },
       { name: 'Restaurant', icon: '🍽️', available: true, hours: '6:00 AM - 10:00 PM' },
+      { name: 'Road Signs Guide', icon: '🚦', available: true, hours: 'Real-time' },
       { name: 'Toilet Facilities', icon: '🚻', available: true, hours: '24/7' }
     ],
     'total-lekki': [
@@ -89,6 +91,7 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
       { name: 'Mini Mart', icon: '🏪', available: true, hours: '6:00 AM - 10:00 PM' },
       { name: 'ATM', icon: '🏧', available: false, hours: 'Out of Service' },
       { name: 'Tire Service', icon: '🛞', available: true, hours: '8:00 AM - 6:00 PM' },
+      { name: 'Road Signs Guide', icon: '🚦', available: true, hours: 'Real-time' },
       { name: 'Toilet Facilities', icon: '🚻', available: true, hours: '6:00 AM - 10:00 PM' }
     ],
     'mobil-ikeja': [
@@ -97,6 +100,7 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
       { name: 'Supermarket', icon: '🏪', available: true, hours: '6:00 AM - 11:00 PM' },
       { name: 'ATM', icon: '🏧', available: true, hours: '24/7' },
       { name: 'Auto Repair', icon: '🔧', available: true, hours: '8:00 AM - 6:00 PM' },
+      { name: 'Road Signs Guide', icon: '🚦', available: true, hours: 'Real-time' },
       { name: 'Toilet Facilities', icon: '🚻', available: true, hours: '6:00 AM - 11:00 PM' }
     ]
   };
@@ -225,7 +229,11 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
         <h2 className="text-lg font-semibold">Other Services</h2>
         <div className="space-y-3">
           {services.map((service, index) => (
-            <Card key={index} className="p-4">
+            <Card 
+              key={index} 
+              className={`p-4 ${service.name === 'Road Signs Guide' ? 'cursor-pointer hover:bg-accent' : ''}`}
+              onClick={() => service.name === 'Road Signs Guide' && onNavigate ? onNavigate('road-signs') : undefined}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="text-2xl">{service.icon}</div>

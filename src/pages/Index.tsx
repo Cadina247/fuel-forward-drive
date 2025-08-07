@@ -8,6 +8,7 @@ import TokenGeneratorScreen from '@/components/TokenGeneratorScreen';
 import EVChargingScreen from '@/components/EVChargingScreen';
 import SoftLoanScreen from '@/components/SoftLoanScreen';
 import TrackOrderScreen from '@/components/TrackOrderScreen';
+import RoadSignsScreen from '@/components/RoadSignsScreen';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState('home');
@@ -66,6 +67,7 @@ const Index = () => {
           <StationDetailsScreen 
             onBack={() => setCurrentScreen('order-fuel')} 
             stationId={selectedStationId}
+            onNavigate={handleNavigate}
           />
         );
       case 'token-generator':
@@ -76,6 +78,8 @@ const Index = () => {
         return <SoftLoanScreen onBack={() => setCurrentScreen('home')} />;
       case 'track-order':
         return <TrackOrderScreen onBack={() => setCurrentScreen('home')} />;
+      case 'road-signs':
+        return <RoadSignsScreen onBack={() => setCurrentScreen('home')} />;
       case 'search':
         return (
           <div className="p-4">
