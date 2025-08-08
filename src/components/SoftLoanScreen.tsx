@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { 
   CreditCard, 
   ArrowLeft, 
@@ -22,15 +23,16 @@ interface SoftLoanScreenProps {
 
 const SoftLoanScreen: React.FC<SoftLoanScreenProps> = ({ onBack }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    amount: '',
-    purpose: '',
-    income: '',
-    employment: '',
-    phone: '',
-    email: '',
-    bvn: ''
-  });
+const [formData, setFormData] = useState({
+  amount: '',
+  purpose: '',
+  income: '',
+  employment: '',
+  phone: '',
+  email: '',
+  bvn: '',
+  loanProvider: 'opay'
+});
 
   const loanPackages = [
     {
@@ -57,6 +59,12 @@ const SoftLoanScreen: React.FC<SoftLoanScreenProps> = ({ onBack }) => {
       interest: '10%',
       description: 'Corporate fuel financing solutions'
     }
+  ];
+
+  const loanProviders = [
+    { id: 'opay', name: 'OPay' },
+    { id: 'palmpay', name: 'PalmPay' },
+    { id: 'fairmoney', name: 'FairMoney' }
   ];
 
   const calculateRepayment = (amount: number, interest: number) => {
@@ -209,6 +217,21 @@ const SoftLoanScreen: React.FC<SoftLoanScreenProps> = ({ onBack }) => {
             </div>
           </Card>
 
+          {/* Loan Provider */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-4">Choose Loan Provider</h3>
+            <Select value={formData.loanProvider} onValueChange={(v) => handleInputChange('loanProvider', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select provider" />
+              </SelectTrigger>
+              <SelectContent>
+                {loanProviders.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Card>
+
           <Card className="p-4">
             <h3 className="font-semibold mb-4">Personal Information</h3>
             <div className="space-y-4">
@@ -319,6 +342,10 @@ const SoftLoanScreen: React.FC<SoftLoanScreenProps> = ({ onBack }) => {
           <div className="flex justify-between">
             <span>Employment:</span>
             <span>{formData.employment}</span>
+          </div>
+<div className="flex justify-between">
+            <span>Loan Provider:</span>
+            <span>{loanProviders.find(p => p.id === formData.loanProvider)?.name}</span>
           </div>
           <div className="flex justify-between">
             <span>Repayment Amount:</span>

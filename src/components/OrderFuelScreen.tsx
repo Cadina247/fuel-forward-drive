@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { 
   Fuel, 
   MapPin, 
@@ -26,6 +27,7 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const [selectedFuel, setSelectedFuel] = useState('petrol');
   const [quantity, setQuantity] = useState(20);
   const [selectedStation, setSelectedStation] = useState('shell-vi');
+  const [deliveryProvider, setDeliveryProvider] = useState('bolt');
 
   const fuelTypes = [
     { id: 'petrol', name: 'Petrol (PMS)', price: 617, icon: '⛽' },
@@ -61,6 +63,12 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
     }
   ];
 
+  const deliveryProviders = [
+    { id: 'bolt', name: 'Bolt' },
+    { id: 'uber', name: 'Uber' },
+    { id: 'taxify', name: 'Taxify' }
+  ];
+
   const selectedFuelData = fuelTypes.find(f => f.id === selectedFuel);
   const selectedStationData = stations.find(s => s.id === selectedStation);
   const basePrice = selectedFuelData?.price || 0;
@@ -68,16 +76,17 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const totalAmount = finalPrice * quantity;
   const deliveryFee = totalAmount > 20000 ? 0 : 500;
 
-  const handlePlaceOrder = () => {
-    const orderData = {
-      fuelType: selectedFuelData,
-      station: selectedStationData,
-      quantity,
-      totalAmount: totalAmount + deliveryFee,
-      deliveryFee,
-      timestamp: new Date().toISOString()
-    };
-    onPlaceOrder(orderData);
+const handlePlaceOrder = () => {
+  const orderData = {
+    fuelType: selectedFuelData,
+    station: selectedStationData,
+    quantity,
+    deliveryProvider: deliveryProviders.find(p => p.id === deliveryProvider),
+    totalAmount: totalAmount + deliveryFee,
+    deliveryFee,
+    timestamp: new Date().toISOString()
+  };
+  onPlaceOrder(orderData);
   };
 
   return (
@@ -216,6 +225,23 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
         </Card>
       </div>
 
+      {/* Delivery Provider */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">Delivery Provider</h2>
+        <Card className="p-4">
+          <Select value={deliveryProvider} onValueChange={setDeliveryProvider}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select provider" />
+            </SelectTrigger>
+            <SelectContent>
+              {deliveryProviders.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Card>
+      </div>
+
       {/* Order Summary */}
       <Card className="p-4 bg-muted/30">
         <h3 className="font-semibold mb-3">Order Summary</h3>
@@ -236,6 +262,10 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
               <span>₦0</span>
             </div>
           )}
+<div className="flex justify-between">
+            <span>Delivered by</span>
+            <span className="font-medium">{deliveryProviders.find(p => p.id === deliveryProvider)?.name}</span>
+          </div>
           <Separator />
           <div className="flex justify-between font-semibold text-lg">
             <span>Total</span>
