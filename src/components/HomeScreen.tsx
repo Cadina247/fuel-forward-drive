@@ -16,6 +16,7 @@ import {
   Percent,
   ParkingCircle
 } from 'lucide-react';
+import AdSenseBanner from '@/components/ads/AdSenseBanner';
 
 interface HomeScreenProps {
   onNavigate: (screen: string) => void;
@@ -57,6 +58,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
           <Percent className="h-8 w-8 opacity-80" />
         </div>
       </Card>
+
+      {/* Google AdSense - replace client/slot with your IDs in index.html */}
+      <AdSenseBanner />
 
       {/* Quick Actions */}
       <div className="space-y-3">

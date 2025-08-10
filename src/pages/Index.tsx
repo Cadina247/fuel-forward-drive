@@ -9,6 +9,7 @@ import EVChargingScreen from '@/components/EVChargingScreen';
 import SoftLoanScreen from '@/components/SoftLoanScreen';
 import TrackOrderScreen from '@/components/TrackOrderScreen';
 import RoadSignsScreen from '@/components/RoadSignsScreen';
+import AuthScreen from '@/components/AuthScreen';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState('home');
@@ -95,12 +96,7 @@ const Index = () => {
           </div>
         );
       case 'profile':
-        return (
-          <div className="p-4">
-            <h1 className="text-2xl font-bold mb-4">Profile</h1>
-            <p className="text-muted-foreground">User profile and settings coming soon...</p>
-          </div>
-        );
+        return <AuthScreen />;
       case 'prohibited-parking':
         return (
           <div className="p-4">
