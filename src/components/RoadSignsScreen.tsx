@@ -1,239 +1,300 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, MapPin, Navigation } from 'lucide-react';
+import { ArrowLeft, Navigation, AlertTriangle, MapPin, Volume2, VolumeX } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface RoadSignsScreenProps {
   onBack: () => void;
 }
 
+interface RoadSign {
+  id: string;
+  type: 'warning' | 'prohibition' | 'information' | 'mandatory';
+  title: string;
+  description: string;
+  location: string;
+  distance: string;
+  severity: 'low' | 'medium' | 'high';
+  icon: string;
+}
+
 const RoadSignsScreen: React.FC<RoadSignsScreenProps> = ({ onBack }) => {
-  const [currentRoute] = useState("Lagos-Ibadan Expressway");
+  const [isLocationEnabled, setIsLocationEnabled] = useState(false);
+  const [currentSigns, setCurrentSigns] = useState<RoadSign[]>([]);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+  const { toast } = useToast();
 
-  const regulatorySigns = [
-    { name: "No Entry", icon: "⛔", description: "Entry prohibited" },
-    { name: "No Parking", icon: "🚫🅿️", description: "Parking not allowed" },
-    { name: "No Overtaking", icon: "🚫⬅️", description: "Overtaking prohibited" },
-    { name: "No U-Turn", icon: "🔄🚫", description: "U-turns not permitted" },
-    { name: "No Left Turn", icon: "⬅️🚫", description: "Left turns prohibited" },
-    { name: "No Right Turn", icon: "➡️🚫", description: "Right turns prohibited" },
-    { name: "Speed Limit 50", icon: "🛑50", description: "Maximum speed 50 km/h" },
-    { name: "No Horn", icon: "🔊🚫", description: "Horn use prohibited" },
-    { name: "Turn Left Only", icon: "⬅️", description: "Mandatory left turn" },
-    { name: "Turn Right Only", icon: "➡️", description: "Mandatory right turn" },
-    { name: "Straight Ahead", icon: "⬆️", description: "Straight ahead only" },
-    { name: "Keep Left", icon: "↙️", description: "Keep to the left" },
-    { name: "Keep Right", icon: "↘️", description: "Keep to the right" },
-    { name: "Roundabout", icon: "⭕", description: "Roundabout ahead" }
+  // Mock real-time road signs data
+  const mockRoadSigns: RoadSign[] = [
+    {
+      id: '1',
+      type: 'prohibition',
+      title: 'No Left Turn',
+      description: 'Left turn prohibited ahead at next intersection',
+      location: 'Victoria Island Lagos',
+      distance: '200m',
+      severity: 'high',
+      icon: '🚫'
+    },
+    {
+      id: '2',
+      type: 'warning',
+      title: 'Speed Limit 50km/h',
+      description: 'Reduce speed - residential area ahead',
+      location: 'Lekki Phase 1',
+      distance: '150m',
+      severity: 'medium',
+      icon: '⚠️'
+    },
+    {
+      id: '3',
+      type: 'information',
+      title: 'Fuel Station Ahead',
+      description: 'Total Energies fuel station on your right',
+      location: 'Ajah',
+      distance: '500m',
+      severity: 'low',
+      icon: 'ℹ️'
+    },
+    {
+      id: '4',
+      type: 'mandatory',
+      title: 'Keep Right',
+      description: 'Road work in progress - use right lane only',
+      location: 'Third Mainland Bridge',
+      distance: '1km',
+      severity: 'high',
+      icon: '➡️'
+    }
   ];
 
-  const warningSigns = [
-    { name: "Curve Ahead", icon: "↪️", description: "Sharp curve approaching" },
-    { name: "Double Bend", icon: "〰️", description: "Series of curves ahead" },
-    { name: "Steep Hill", icon: "⛰️", description: "Steep incline/decline" },
-    { name: "Pedestrian Crossing", icon: "🚸", description: "Pedestrian crossing ahead" },
-    { name: "Children Crossing", icon: "👶", description: "School zone - children crossing" },
-    { name: "Slippery Road", icon: "💧", description: "Road may be slippery" },
-    { name: "Traffic Signals", icon: "🚦", description: "Traffic lights ahead" },
-    { name: "Uneven Road", icon: "🛣️", description: "Road surface irregular" },
-    { name: "Road Narrows", icon: "🔄", description: "Road width reduces" },
-    { name: "Cattle Crossing", icon: "🐄", description: "Animals may cross" },
-    { name: "Falling Rocks", icon: "🪨", description: "Rockfall zone" },
-    { name: "Crosswinds", icon: "💨", description: "Strong winds possible" }
-  ];
+  useEffect(() => {
+    if (isLocationEnabled) {
+      // Simulate real-time updates
+      const interval = setInterval(() => {
+        const randomSigns = mockRoadSigns
+          .sort(() => Math.random() - 0.5)
+          .slice(0, Math.floor(Math.random() * 3) + 1);
+        setCurrentSigns(randomSigns);
+        
+        if (isVoiceEnabled && randomSigns.length > 0) {
+          const highPrioritySigns = randomSigns.filter(sign => sign.severity === 'high');
+          if (highPrioritySigns.length > 0) {
+            announceSign(highPrioritySigns[0]);
+          }
+        }
+      }, 3000);
 
-  const informationalSigns = [
-    { name: "Hospital", icon: "🏥", description: "Medical facility ahead" },
-    { name: "Petrol Station", icon: "⛽", description: "Fuel station ahead" },
-    { name: "Parking", icon: "🅿️", description: "Parking area" },
-    { name: "Rest Area", icon: "🛏️", description: "Rest stop available" },
-    { name: "Airport", icon: "✈️", description: "Airport direction" },
-    { name: "Police Station", icon: "👮‍♂️", description: "Police post ahead" },
-    { name: "Toll Gate", icon: "🎫", description: "Toll collection point" },
-    { name: "Bridge Ahead", icon: "🌉", description: "Bridge crossing" },
-    { name: "Ferry", icon: "⛴️", description: "Ferry terminal" }
-  ];
+      return () => clearInterval(interval);
+    }
+  }, [isLocationEnabled, isVoiceEnabled]);
 
-  const constructionSigns = [
-    { name: "Men at Work", icon: "👷", description: "Construction zone - workers present" },
-    { name: "Road Closed", icon: "🚧", description: "Road temporarily closed" },
-    { name: "Detour Ahead", icon: "↪️", description: "Alternative route required" },
-    { name: "Temporary Traffic Light", icon: "🚦", description: "Temporary signal control" },
-    { name: "Flagman Ahead", icon: "🚩", description: "Traffic controller present" },
-    { name: "Loose Gravel", icon: "🪨", description: "Loose road surface" },
-    { name: "Speed Bump", icon: "⚡", description: "Speed reduction ahead" }
-  ];
+  const announceSign = (sign: RoadSign) => {
+    if ('speechSynthesis' in window && isVoiceEnabled) {
+      const utterance = new SpeechSynthesisUtterance(
+        `Attention: ${sign.title}. ${sign.description} in ${sign.distance}.`
+      );
+      utterance.rate = 0.8;
+      utterance.pitch = 1;
+      speechSynthesis.speak(utterance);
+    }
+  };
 
-  const activeRouteSigns = [
-    { sign: "Speed Limit 50", distance: "200m", status: "active" },
-    { sign: "Curve Ahead", distance: "500m", status: "upcoming" },
-    { sign: "Petrol Station", distance: "1.2km", status: "upcoming" },
-    { sign: "Traffic Signals", distance: "2km", status: "upcoming" }
-  ];
+  const enableLocation = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          setIsLocationEnabled(true);
+          toast({
+            title: 'Location Enabled',
+            description: 'Real-time road signs will now be displayed based on your location.'
+          });
+        },
+        () => {
+          toast({
+            title: 'Location Access Denied',
+            description: 'Please enable location access for real-time road signs.',
+            variant: 'destructive'
+          });
+        }
+      );
+    }
+  };
 
-  const SignCard = ({ signs }: { signs: Array<{ name: string; icon: string; description: string }> }) => (
-    <div className="grid grid-cols-2 gap-3">
-      {signs.map((sign, index) => (
-        <Card key={index} className="p-3">
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">{sign.icon}</div>
-            <div className="flex-1">
-              <h4 className="font-medium text-sm">{sign.name}</h4>
-              <p className="text-xs text-muted-foreground">{sign.description}</p>
-            </div>
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
+  const toggleVoice = () => {
+    setIsVoiceEnabled(!isVoiceEnabled);
+    toast({
+      title: isVoiceEnabled ? 'Voice Assistant Disabled' : 'Voice Assistant Enabled',
+      description: isVoiceEnabled 
+        ? 'Road sign announcements turned off.'
+        : 'Road signs will now be announced audibly.'
+    });
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'high': return 'destructive';
+      case 'medium': return 'default';
+      case 'low': return 'secondary';
+      default: return 'default';
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'prohibition': return 'bg-red-500';
+      case 'warning': return 'bg-yellow-500';
+      case 'mandatory': return 'bg-blue-500';
+      case 'information': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-background p-4 space-y-6">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">Road Signs Guide</h1>
-          <p className="text-muted-foreground">Real-time road signs for your journey</p>
+      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border z-10">
+        <div className="flex items-center gap-4 p-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-xl font-bold">Road Signs Guide</h1>
+            <p className="text-sm text-muted-foreground">Real-time traffic information</p>
+          </div>
+          <Button 
+            variant={isVoiceEnabled ? "default" : "outline"}
+            size="icon"
+            onClick={toggleVoice}
+            className="ml-2"
+          >
+            {isVoiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
         </div>
       </div>
 
-      {/* Current Route Signs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Navigation className="h-5 w-5" />
-            Active Route: {currentRoute}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {activeRouteSigns.map((routeSign, index) => (
-            <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-primary" />
-                <div>
-                  <p className="font-medium">{routeSign.sign}</p>
-                  <p className="text-sm text-muted-foreground">Distance: {routeSign.distance}</p>
-                </div>
+      <div className="p-4 space-y-6">
+
+        {/* Location Status */}
+        {!isLocationEnabled ? (
+          <Card className="p-6 text-center">
+            <Navigation className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-semibold mb-2">Enable Location Services</h3>
+            <p className="text-muted-foreground mb-4">
+              Allow location access to receive real-time road signs and traffic information while driving.
+            </p>
+            <Button onClick={enableLocation} className="w-full">
+              <MapPin className="h-4 w-4 mr-2" />
+              Enable Location
+            </Button>
+          </Card>
+        ) : (
+          <Card className="p-4 bg-primary/5 border-primary/20">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <div>
+                <p className="font-medium text-primary">Location Active</p>
+                <p className="text-sm text-muted-foreground">Monitoring road signs in real-time</p>
               </div>
-              <Badge variant={routeSign.status === 'active' ? 'default' : 'secondary'}>
-                {routeSign.status}
-              </Badge>
             </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Road Signs Categories */}
-      <Tabs defaultValue="regulatory" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="regulatory">Regulatory</TabsTrigger>
-          <TabsTrigger value="warning">Warning</TabsTrigger>
-          <TabsTrigger value="info">Information</TabsTrigger>
-          <TabsTrigger value="construction">Construction</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="regulatory" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🚫 Regulatory Signs
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Control and prohibitive signs - what must or must not be done
-              </p>
-            </CardHeader>
-            <CardContent>
-              <SignCard signs={regulatorySigns} />
-            </CardContent>
           </Card>
-        </TabsContent>
+        )}
 
-        <TabsContent value="warning" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                ⚠️ Warning Signs
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Alert drivers to potential hazards or changes in road conditions
-              </p>
-            </CardHeader>
-            <CardContent>
-              <SignCard signs={warningSigns} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="info" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🚸 Informational Signs
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Provide directions and general road information
-              </p>
-            </CardHeader>
-            <CardContent>
-              <SignCard signs={informationalSigns} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="construction" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🛠️ Construction Signs
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Used near construction zones or detours
-              </p>
-            </CardHeader>
-            <CardContent>
-              <SignCard signs={constructionSigns} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Traffic Light Guide */}
-      <Card>
-        <CardHeader>
-          <CardTitle>🚥 Traffic Light Signals</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 border rounded-lg">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span className="font-medium">Red</span>
-              <span className="text-muted-foreground">- Stop completely</span>
+        {/* Voice Assistant Status */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                isVoiceEnabled ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}>
+                {isVoiceEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              </div>
+              <div>
+                <h3 className="font-medium">AI Voice Assistant</h3>
+                <p className="text-sm text-muted-foreground">
+                  {isVoiceEnabled ? 'Announcing important road signs' : 'Accessibility feature for visually impaired'}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-3 p-3 border rounded-lg">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span className="font-medium">Yellow/Amber</span>
-              <span className="text-muted-foreground">- Prepare to stop</span>
+            <Button variant="outline" size="sm" onClick={toggleVoice}>
+              {isVoiceEnabled ? 'Disable' : 'Enable'}
+            </Button>
+          </div>
+        </Card>
+
+        {/* Current Road Signs */}
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            Active Road Signs
+          </h2>
+          
+          {currentSigns.length === 0 ? (
+            <Card className="p-6 text-center">
+              <div className="text-4xl mb-2">🛣️</div>
+              <p className="text-muted-foreground">
+                {isLocationEnabled 
+                  ? 'No active road signs in your area. Safe driving!' 
+                  : 'Enable location to see real-time road signs.'
+                }
+              </p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {currentSigns.map((sign) => (
+                <Card key={sign.id} className="p-4 border-l-4 border-l-orange-500">
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white ${getTypeColor(sign.type)}`}>
+                      <span className="text-xl">{sign.icon}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">{sign.title}</h3>
+                        <Badge variant={getSeverityColor(sign.severity) as any}>
+                          {sign.distance}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">{sign.description}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span>{sign.location}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
-            <div className="flex items-center gap-3 p-3 border rounded-lg">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="font-medium">Green</span>
-              <span className="text-muted-foreground">- Proceed with caution</span>
+          )}
+        </div>
+
+        {/* Road Sign Legend */}
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">Sign Types</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-red-500"></div>
+              <span className="text-sm">Prohibition</span>
             </div>
-            <div className="flex items-center gap-3 p-3 border rounded-lg">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="font-medium">Green Arrow</span>
-              <span className="text-muted-foreground">- Direction-specific go</span>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-yellow-500"></div>
+              <span className="text-sm">Warning</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-blue-500"></div>
+              <span className="text-sm">Mandatory</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-green-500"></div>
+              <span className="text-sm">Information</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
+
 
 export default RoadSignsScreen;

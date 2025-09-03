@@ -14,7 +14,9 @@ import {
   Clock,
   MapPin,
   Percent,
-  ParkingCircle
+  ParkingCircle,
+  Navigation,
+  Flame
 } from 'lucide-react';
 import AdSenseBanner from '@/components/ads/AdSenseBanner';
 
@@ -81,6 +83,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
           >
             <Truck className="h-6 w-6 mb-2" />
             <span>Track Order</span>
+          </Button>
+          <Button 
+            variant="quick" 
+            className="h-24 flex-col"
+            onClick={() => onNavigate('road-signs')}
+          >
+            <Navigation className="h-6 w-6 mb-2" />
+            <span>Road Signs</span>
+          </Button>
+          <Button 
+            variant="quick" 
+            className="h-24 flex-col"
+            onClick={() => onNavigate('cooking-gas')}
+          >
+            <Flame className="h-6 w-6 mb-2" />
+            <span>Cooking Gas</span>
           </Button>
           <Button 
             variant="quick" 
