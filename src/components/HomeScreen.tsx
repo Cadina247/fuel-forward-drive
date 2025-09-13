@@ -90,7 +90,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             onClick={() => onNavigate('service-nearby')}
           >
             <Car className="h-6 w-6 mb-2" />
-            <span>Service Nearby</span>
+            <span>Nearby Resources</span>
           </Button>
           <Button 
             variant="quick" 
