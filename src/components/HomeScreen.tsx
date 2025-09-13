@@ -15,7 +15,8 @@ import {
   MapPin,
   Percent,
   ParkingCircle,
-  Navigation
+  Navigation,
+  Car
 } from 'lucide-react';
 import AdSenseBanner from '@/components/ads/AdSenseBanner';
 
@@ -82,6 +83,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
           >
             <Truck className="h-6 w-6 mb-2" />
             <span>Track Order</span>
+          </Button>
+          <Button 
+            variant="quick" 
+            className="h-24 flex-col"
+            onClick={() => onNavigate('service-nearby')}
+          >
+            <Car className="h-6 w-6 mb-2" />
+            <span>Service Nearby</span>
           </Button>
           <Button 
             variant="quick" 

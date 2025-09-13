@@ -10,6 +10,7 @@ import SoftLoanScreen from '@/components/SoftLoanScreen';
 import TrackOrderScreen from '@/components/TrackOrderScreen';
 import RoadSignsScreen from '@/components/RoadSignsScreen';
 import CookingGasScreen from '@/components/CookingGasScreen';
+import ServiceNearbyScreen from '@/components/ServiceNearbyScreen';
 import AuthScreen from '@/components/AuthScreen';
 
 const Index = () => {
@@ -82,6 +83,8 @@ const Index = () => {
         return <TrackOrderScreen onBack={() => setCurrentScreen('home')} />;
       case 'road-signs':
         return <RoadSignsScreen onBack={() => setCurrentScreen('home')} />;
+      case 'service-nearby':
+        return <ServiceNearbyScreen onBack={() => setCurrentScreen('home')} />;
       case 'cooking-gas':
         return <CookingGasScreen onBack={() => setCurrentScreen('home')} />;
       case 'search':
