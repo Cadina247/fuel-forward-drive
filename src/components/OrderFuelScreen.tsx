@@ -27,7 +27,7 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const [selectedFuel, setSelectedFuel] = useState('petrol');
   const [quantity, setQuantity] = useState(20);
   const [selectedStation, setSelectedStation] = useState('shell-vi');
-  const [deliveryProvider, setDeliveryProvider] = useState('bolt');
+  const [deliveryProvider, setDeliveryProvider] = useState('in-house');
 
   const fuelTypes = [
     { id: 'petrol', name: 'Petrol (PMS)', price: 617, icon: '⛽' },
@@ -64,10 +64,13 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   ];
 
   const deliveryProviders = [
-    { id: 'bolt', name: 'Bolt' },
-    { id: 'uber', name: 'Uber' },
-    { id: 'taxify', name: 'Taxify' }
+    { id: 'in-house', name: 'Station Delivery', description: 'Direct from station', icon: '🏪', isInHouse: true },
+    { id: 'bolt', name: 'Bolt', description: 'Third-party', icon: '⚡', isInHouse: false },
+    { id: 'uber', name: 'Uber', description: 'Third-party', icon: '🚗', isInHouse: false },
+    { id: 'taxify', name: 'Taxify', description: 'Third-party', icon: '🚕', isInHouse: false }
   ];
+
+  const selectedProviderData = deliveryProviders.find(p => p.id === deliveryProvider);
 
   const selectedFuelData = fuelTypes.find(f => f.id === selectedFuel);
   const selectedStationData = stations.find(s => s.id === selectedStation);
@@ -228,18 +231,41 @@ const handlePlaceOrder = () => {
       {/* Delivery Provider */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Delivery Provider</h2>
-        <Card className="p-4">
-          <Select value={deliveryProvider} onValueChange={setDeliveryProvider}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select provider" />
-            </SelectTrigger>
-            <SelectContent>
-              {deliveryProviders.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Card>
+        <div className="grid grid-cols-2 gap-3">
+          {deliveryProviders.map((provider) => (
+            <Card 
+              key={provider.id}
+              className={`p-4 cursor-pointer transition-all border-2 ${
+                deliveryProvider === provider.id 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:border-primary/50'
+              }`}
+              onClick={() => setDeliveryProvider(provider.id)}
+            >
+              <div className="text-center space-y-1">
+                <div className="text-2xl">{provider.icon}</div>
+                <h3 className="font-medium text-sm">{provider.name}</h3>
+                <p className="text-xs text-muted-foreground">{provider.description}</p>
+                {provider.isInHouse && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                    Faster & Trusted
+                  </Badge>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+        {selectedProviderData?.isInHouse && (
+          <Card className="p-3 bg-green-50 border-green-200">
+            <div className="flex items-start gap-2">
+              <div className="text-green-600 text-lg">✓</div>
+              <div className="text-sm">
+                <p className="font-medium text-green-800">In-House Station Delivery</p>
+                <p className="text-green-700 text-xs">Verified station staff • Faster delivery • Direct accountability</p>
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Order Summary */}
