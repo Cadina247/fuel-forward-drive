@@ -1,0 +1,139 @@
+name: Auto-Sync Mobile App with Web Updates
+
+on:
+  repository_dispatch:
+    types:
+      - web-app-updated
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  sync-and-build:
+    name: Sync and Build Mobile App
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout mobile app code
+        uses: actions/checkout@v4
+        with:
+          repository: Cadina247/fuel-forward-drive
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Display trigger information
+        run: |
+          echo "🔔 Workflow triggered"
+          echo "Event: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "Reason: Web app was updated"
+            echo "Web App Commit: ${{ github.event.client_payload.web_version }}"
+            echo "Timestamp: ${{ github.event.client_payload.timestamp }}"
+          fi
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run linting
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build mobile app
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-build
+          path: dist/
+
+      - name: Fetch web app details
+        id: web-info
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          echo "web_commit=${{ github.event.client_payload.web_version }}" >> $GITHUB_OUTPUT
+          echo "sync_timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Create version sync file
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          cat > dist/sync-info.json << 'EOF'
+          {
+            "mobile_version": "${{ github.sha }}",
+            "synced_with_web": "${{ steps.web-info.outputs.web_commit }}",
+            "sync_timestamp": "${{ steps.web-info.outputs.sync_timestamp }}",
+            "sync_status": "success"
+          }
+          EOF
+
+      - name: Deploy mobile app to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+
+  notify-completion:
+    name: Notify Sync Completion
+    runs-on: ubuntu-latest
+    needs: sync-and-build
+    if: always()
+    
+    steps:
+      - name: Report sync status
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Mobile app successfully synced and deployed!"
+            echo "📱 New mobile build is live"
+          else
+            echo "❌ Mobile app sync failed"
+            echo "⚠️  Please check the logs above"
+          fi
+
+  create-release:
+    name: Create Release (Optional)
+    runs-on: ubuntu-latest
+    needs: sync-and-build
+    if: github.event_name == 'repository_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create release tag
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const timestamp = new Date().toISOString();
+            const shortSha = context.sha.substring(0, 7);
+            const tagName = `v-sync-${shortSha}-${Date.now()}`;
+            const releaseName = `Mobile Sync Release - ${timestamp}`;
+            
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `refs/tags/${tagName}`,
+                sha: context.sha
+              });
+              
+              await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: tagName,
+                name: releaseName,
+                body: `🔄 Auto-synced with web app\n\nWeb Version: ${{ github.event.client_payload.web_version }}\nTimestamp: ${{ github.event.client_payload.timestamp }}`,
+                draft: false,
+                prerelease: true
+              });
+              
+              console.log(`✅ Release created: ${tagName}`);
+            } catch (error) {
+              console.log(`ℹ️  Release creation skipped: ${error.message}`);
+            }
