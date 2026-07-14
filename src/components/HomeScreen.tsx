@@ -168,6 +168,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
               </div>
             </div>
           </Card>
+
+          <Card className="p-4 hover:shadow-soft transition-all cursor-pointer" onClick={() => onNavigate('delivery-provider-registration')}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-fuel rounded-lg flex items-center justify-center">
+                  <Truck className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Become a Delivery Provider</h3>
+                  <p className="text-sm text-muted-foreground">Register with a filling station</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-secondary font-medium">Earn weekly</p>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
 
