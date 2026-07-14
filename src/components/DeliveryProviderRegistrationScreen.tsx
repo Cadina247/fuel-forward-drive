@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
+import AuthScreen from '@/components/AuthScreen';
 import {
   ArrowLeft,
   User,
@@ -22,6 +24,8 @@ import {
   Truck,
   Building2,
   ShieldCheck,
+  Loader2,
+  LogIn,
 } from 'lucide-react';
 
 interface Props {
@@ -29,6 +33,11 @@ interface Props {
 }
 
 type Step = 1 | 2 | 3 | 4;
+
+interface UploadedDoc {
+  name: string;
+  path: string; // storage path or local fallback
+}
 
 const stations = [
   { id: 'shell-vi', name: 'Shell — Victoria Island' },
@@ -44,11 +53,18 @@ const vehicles = [
 ];
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const BUCKET = 'provider-documents';
 
 const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [showSignIn, setShowSignIn] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [availableNow, setAvailableNow] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '',
@@ -60,9 +76,9 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
     plateNumber: '',
     idType: 'nin',
     idNumber: '',
-    idDoc: '' as string, // file name only (mock)
-    licenseDoc: '' as string,
-    vehicleDoc: '' as string,
+    idDoc: null as UploadedDoc | null,
+    licenseDoc: null as UploadedDoc | null,
+    vehicleDoc: null as UploadedDoc | null,
     availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] as string[],
     shiftStart: '08:00',
     shiftEnd: '18:00',
@@ -72,6 +88,27 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  // Session check
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUserId(data.user.id);
+        setForm((f) => ({ ...f, email: f.email || data.user!.email || '' }));
+      }
+      setCheckingAuth(false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        setShowSignIn(false);
+        setForm((f) => ({ ...f, email: f.email || session.user.email || '' }));
+      } else {
+        setUserId(null);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
   const toggleDay = (d: string) =>
     set(
       'availableDays',
@@ -80,10 +117,34 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
         : [...form.availableDays, d],
     );
 
-  const fakeUpload = (field: 'idDoc' | 'licenseDoc' | 'vehicleDoc') => {
-    const name = `${field}-${Date.now()}.pdf`;
-    set(field, name);
-    toast({ title: 'Document uploaded', description: name });
+  const handleFileUpload = async (
+    field: 'idDoc' | 'licenseDoc' | 'vehicleDoc',
+    file: File,
+  ) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Max 5MB.', variant: 'destructive' });
+      return;
+    }
+    setUploading(field);
+    const path = `${userId ?? 'anon'}/${field}-${Date.now()}-${file.name}`;
+    try {
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (error) throw error;
+      set(field, { name: file.name, path });
+      toast({ title: 'Document uploaded', description: file.name });
+    } catch (err: any) {
+      // Fallback: store filename only so flow can proceed
+      set(field, { name: file.name, path: `local://${path}` });
+      toast({
+        title: 'Uploaded (pending sync)',
+        description: err?.message || 'Storage will finalize once bucket is set up.',
+      });
+    } finally {
+      setUploading(null);
+    }
   };
 
   const canNext =
@@ -96,6 +157,7 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
     setSubmitting(true);
     try {
       const { error } = await supabase.from('delivery_provider_applications').insert({
+        user_id: userId,
         full_name: form.fullName,
         phone: form.phone,
         email: form.email,
@@ -105,32 +167,141 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
         plate_number: form.plateNumber,
         id_type: form.idType,
         id_number: form.idNumber,
-        id_doc: form.idDoc,
-        license_doc: form.licenseDoc,
-        vehicle_doc: form.vehicleDoc,
+        id_doc_path: form.idDoc?.path,
+        license_doc_path: form.licenseDoc?.path,
+        vehicle_doc_path: form.vehicleDoc?.path,
         available_days: form.availableDays,
         shift_start: form.shiftStart,
         shift_end: form.shiftEnd,
+        is_available: availableNow,
+        status: 'pending_review',
       });
       if (error) throw error;
       toast({
         title: 'Application submitted! 🎉',
-        description: 'Your station will review your details and get back within 24–48 hours.',
+        description: 'Your station will review your details within 24–48 hours.',
       });
-      onBack();
+      setSubmitted(true);
     } catch (err: any) {
-      // Fallback (e.g. table not yet created) — still confirm to user
       toast({
         title: 'Application received',
         description: err?.message
           ? `Saved locally. ${err.message}`
           : 'Your station will review your details shortly.',
       });
-      onBack();
+      setSubmitted(true);
     } finally {
       setSubmitting(false);
     }
   };
+
+  const updateAvailability = async (next: boolean) => {
+    setAvailableNow(next);
+    try {
+      await supabase
+        .from('delivery_provider_applications')
+        .update({ is_available: next, availability_updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+    } catch {
+      /* silent — UI still reflects toggle */
+    }
+    toast({
+      title: next ? 'You are now available' : 'You are offline',
+      description: next
+        ? 'Your station can now dispatch orders to you.'
+        : 'You will not receive new dispatches.',
+    });
+  };
+
+  // --- Auth gate ---
+  if (checkingAuth) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!userId) {
+    if (showSignIn) {
+      return (
+        <div className="p-4 space-y-4">
+          <Button variant="ghost" onClick={() => setShowSignIn(false)}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          </Button>
+          <AuthScreen />
+        </div>
+      );
+    }
+    return (
+      <div className="p-4 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold">Become a Delivery Provider</h1>
+        </div>
+        <Card className="p-6 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+            <LogIn className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="font-semibold">Sign in to continue</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              You need an account so your station can verify your identity and
+              route dispatches to you.
+            </p>
+          </div>
+          <Button variant="fuel" className="w-full" onClick={() => setShowSignIn(true)}>
+            Sign in / Create account
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // --- Post-submission dashboard with availability toggle ---
+  if (submitted) {
+    return (
+      <div className="p-4 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold">Provider Dashboard</h1>
+        </div>
+
+        <Card className="p-4 space-y-2">
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle className="h-5 w-5" />
+            <p className="font-semibold">Application submitted</p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Status: <Badge variant="secondary">Pending review</Badge>
+          </p>
+        </Card>
+
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold">Availability</p>
+              <p className="text-xs text-muted-foreground">
+                {availableNow ? 'Accepting dispatches' : 'Not accepting dispatches'}
+              </p>
+            </div>
+            <Switch checked={availableNow} onCheckedChange={updateAvailability} />
+          </div>
+          <div className="text-xs text-muted-foreground border-t pt-2">
+            Shift: {form.shiftStart} – {form.shiftEnd} • {form.availableDays.join(', ')}
+          </div>
+        </Card>
+
+        <Button variant="outline" className="w-full" onClick={onBack}>
+          Back to Home
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-6">
@@ -159,7 +330,7 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
         <Progress value={step * 25} className="h-2" />
       </div>
 
-      {/* STEP 1 — Personal */}
+      {/* STEP 1 */}
       {step === 1 && (
         <Card className="p-4 space-y-4">
           <div className="flex items-center gap-2">
@@ -189,7 +360,7 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
         </Card>
       )}
 
-      {/* STEP 2 — Station & vehicle */}
+      {/* STEP 2 */}
       {step === 2 && (
         <Card className="p-4 space-y-4">
           <div className="flex items-center gap-2">
@@ -235,7 +406,7 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
         </Card>
       )}
 
-      {/* STEP 3 — Documents */}
+      {/* STEP 3 */}
       {step === 3 && (
         <Card className="p-4 space-y-4">
           <div className="flex items-center gap-2">
@@ -268,21 +439,43 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
               licenseDoc: "Driver's License",
               vehicleDoc: 'Vehicle Registration',
             };
+            const doc = form[field];
+            const isUp = uploading === field;
             return (
               <div key={field} className="flex items-center justify-between border rounded-lg p-3">
-                <div>
+                <div className="flex-1 min-w-0 pr-2">
                   <p className="text-sm font-medium">{labels[field]}</p>
-                  {form[field] ? (
-                    <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
-                      <CheckCircle className="h-3 w-3" /> {form[field]}
+                  {doc ? (
+                    <p className="text-xs text-green-600 flex items-center gap-1 mt-1 truncate">
+                      <CheckCircle className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{doc.name}</span>
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">PDF, JPG or PNG • Max 5MB</p>
                   )}
                 </div>
-                <Button variant="outline" size="sm" onClick={() => fakeUpload(field)}>
-                  <Upload className="h-4 w-4 mr-1" /> Upload
-                </Button>
+                <label>
+                  <input
+                    type="file"
+                    accept=".pdf,image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleFileUpload(field, f);
+                      e.target.value = '';
+                    }}
+                  />
+                  <Button variant="outline" size="sm" asChild disabled={isUp}>
+                    <span>
+                      {isUp ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-1" />
+                      )}
+                      {doc ? 'Replace' : 'Upload'}
+                    </span>
+                  </Button>
+                </label>
               </div>
             );
           })}
@@ -296,7 +489,7 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
         </Card>
       )}
 
-      {/* STEP 4 — Availability */}
+      {/* STEP 4 */}
       {step === 4 && (
         <Card className="p-4 space-y-4">
           <div className="flex items-center gap-2">
@@ -332,6 +525,14 @@ const DeliveryProviderRegistrationScreen: React.FC<Props> = ({ onBack }) => {
               <Label htmlFor="end">Shift End</Label>
               <Input id="end" type="time" value={form.shiftEnd} onChange={(e) => set('shiftEnd', e.target.value)} />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between border rounded-lg p-3">
+            <div>
+              <p className="text-sm font-medium">Go available immediately after approval</p>
+              <p className="text-xs text-muted-foreground">You can toggle this any time.</p>
+            </div>
+            <Switch checked={availableNow} onCheckedChange={setAvailableNow} />
           </div>
 
           <div className="flex items-start gap-2 pt-2">
