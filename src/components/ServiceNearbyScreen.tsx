@@ -73,6 +73,21 @@ const ServiceNearbyScreen: React.FC<ServiceNearbyScreenProps> = ({ onBack }) => 
     timeline: []
   });
   const [searchingProgress, setSearchingProgress] = useState(0);
+  const [radiusKm, setRadiusKm] = useState<number>(5);
+  const [showRadiusSettings, setShowRadiusSettings] = useState(false);
+
+  const nearbyStations = [
+    { id: 'shell-vi', name: 'Shell — Victoria Island', distance: 0.8, price: 780, open: true },
+    { id: 'total-lekki', name: 'Total — Lekki Phase 1', distance: 2.3, price: 775, open: true },
+    { id: 'mobil-ikeja', name: 'Mobil — Ikeja', distance: 4.6, price: 790, open: true },
+    { id: 'nnpc-ajah', name: 'NNPC — Ajah', distance: 7.2, price: 770, open: false },
+    { id: 'oando-yaba', name: 'Oando — Yaba', distance: 11.5, price: 785, open: true },
+    { id: 'conoil-ikoyi', name: 'Conoil — Ikoyi', distance: 18.4, price: 795, open: true },
+  ];
+  const filteredStations = useMemo(
+    () => nearbyStations.filter((s) => s.distance <= radiusKm).sort((a, b) => a.distance - b.distance),
+    [radiusKm],
+  );
 
   const services = [
     { id: 'gas', name: 'Gas Refill/Delivery', icon: Fuel, color: 'bg-blue-500' },
