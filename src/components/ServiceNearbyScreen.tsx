@@ -211,6 +211,71 @@ const ServiceNearbyScreen: React.FC<ServiceNearbyScreenProps> = ({ onBack }) => 
 
   const renderServiceSelection = () => (
     <div className="space-y-4">
+      {/* Filling Stations Nearby with radius */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FuelIcon className="h-5 w-5 text-primary" /> Filling Stations Nearby
+              </CardTitle>
+              <CardDescription>{filteredStations.length} within {radiusKm} km</CardDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowRadiusSettings((v) => !v)}
+              aria-label="Radius settings"
+            >
+              <Settings2 className="h-4 w-4 mr-1" /> Radius
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {showRadiusSettings && (
+            <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Search radius</span>
+                <span className="font-semibold">{radiusKm} km</span>
+              </div>
+              <Slider
+                value={[radiusKm]}
+                min={1}
+                max={25}
+                step={1}
+                onValueChange={(v) => setRadiusKm(v[0])}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>1 km (narrow)</span>
+                <span>25 km (extended)</span>
+              </div>
+            </div>
+          )}
+
+          {filteredStations.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-3">
+              No stations within {radiusKm} km. Try extending your radius.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {filteredStations.map((s) => (
+                <div key={s.id} className="flex items-center justify-between border rounded-lg p-3">
+                  <div>
+                    <p className="font-medium text-sm">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {s.distance} km away • ₦{s.price}/L
+                    </p>
+                  </div>
+                  <Badge variant={s.open ? 'default' : 'secondary'}>
+                    {s.open ? 'Open' : 'Closed'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <h2 className="text-xl font-bold mb-4">Select Service</h2>
       <div className="grid grid-cols-2 gap-4">
         {services.map((service) => {
