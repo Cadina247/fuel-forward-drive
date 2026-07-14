@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
+import { Settings2, Fuel as FuelIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft,
@@ -71,6 +73,21 @@ const ServiceNearbyScreen: React.FC<ServiceNearbyScreenProps> = ({ onBack }) => 
     timeline: []
   });
   const [searchingProgress, setSearchingProgress] = useState(0);
+  const [radiusKm, setRadiusKm] = useState<number>(5);
+  const [showRadiusSettings, setShowRadiusSettings] = useState(false);
+
+  const nearbyStations = [
+    { id: 'shell-vi', name: 'Shell — Victoria Island', distance: 0.8, price: 780, open: true },
+    { id: 'total-lekki', name: 'Total — Lekki Phase 1', distance: 2.3, price: 775, open: true },
+    { id: 'mobil-ikeja', name: 'Mobil — Ikeja', distance: 4.6, price: 790, open: true },
+    { id: 'nnpc-ajah', name: 'NNPC — Ajah', distance: 7.2, price: 770, open: false },
+    { id: 'oando-yaba', name: 'Oando — Yaba', distance: 11.5, price: 785, open: true },
+    { id: 'conoil-ikoyi', name: 'Conoil — Ikoyi', distance: 18.4, price: 795, open: true },
+  ];
+  const filteredStations = useMemo(
+    () => nearbyStations.filter((s) => s.distance <= radiusKm).sort((a, b) => a.distance - b.distance),
+    [radiusKm],
+  );
 
   const services = [
     { id: 'gas', name: 'Gas Refill/Delivery', icon: Fuel, color: 'bg-blue-500' },
@@ -194,6 +211,71 @@ const ServiceNearbyScreen: React.FC<ServiceNearbyScreenProps> = ({ onBack }) => 
 
   const renderServiceSelection = () => (
     <div className="space-y-4">
+      {/* Filling Stations Nearby with radius */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FuelIcon className="h-5 w-5 text-primary" /> Filling Stations Nearby
+              </CardTitle>
+              <CardDescription>{filteredStations.length} within {radiusKm} km</CardDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowRadiusSettings((v) => !v)}
+              aria-label="Radius settings"
+            >
+              <Settings2 className="h-4 w-4 mr-1" /> Radius
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {showRadiusSettings && (
+            <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Search radius</span>
+                <span className="font-semibold">{radiusKm} km</span>
+              </div>
+              <Slider
+                value={[radiusKm]}
+                min={1}
+                max={25}
+                step={1}
+                onValueChange={(v) => setRadiusKm(v[0])}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>1 km (narrow)</span>
+                <span>25 km (extended)</span>
+              </div>
+            </div>
+          )}
+
+          {filteredStations.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-3">
+              No stations within {radiusKm} km. Try extending your radius.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {filteredStations.map((s) => (
+                <div key={s.id} className="flex items-center justify-between border rounded-lg p-3">
+                  <div>
+                    <p className="font-medium text-sm">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {s.distance} km away • ₦{s.price}/L
+                    </p>
+                  </div>
+                  <Badge variant={s.open ? 'default' : 'secondary'}>
+                    {s.open ? 'Open' : 'Closed'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <h2 className="text-xl font-bold mb-4">Select Service</h2>
       <div className="grid grid-cols-2 gap-4">
         {services.map((service) => {
