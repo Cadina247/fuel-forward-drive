@@ -186,22 +186,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             </div>
           </Card>
 
-          <Card className="p-4 hover:shadow-soft transition-all cursor-pointer" onClick={() => onNavigate('station-incoming')}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center">
-                  <Bell className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Station Panel</h3>
-                  <p className="text-sm text-muted-foreground">Receive & accept incoming orders</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-primary font-medium">Live</p>
-              </div>
-            </div>
-          </Card>
         </div>
       </div>
 
