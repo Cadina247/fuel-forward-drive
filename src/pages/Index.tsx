@@ -21,6 +21,7 @@ const Index = () => {
   const [currentScreen, setCurrentScreen] = useState('home');
   const [activeTab, setActiveTab] = useState('home');
   const [selectedStationId, setSelectedStationId] = useState<string>('');
+  const [pendingOrder, setPendingOrder] = useState<IncomingOrder | null>(null);
   const { toast } = useToast();
 
   const handleNavigate = (screen: string) => {
@@ -44,16 +45,32 @@ const Index = () => {
   };
 
   const handlePlaceOrder = (orderData: any) => {
-    // Generate PODC and show success
-    const podc = Math.floor(100000 + Math.random() * 900000).toString();
-    
+    const order: IncomingOrder = {
+      id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      createdAt: Date.now(),
+      customer: 'Obehi',
+      fuelType: orderData?.fuelType ?? orderData?.fuel?.name ?? 'Petrol',
+      quantity: Number(orderData?.quantity ?? 20),
+      amount: Number(orderData?.totalAmount ?? orderData?.total ?? 0),
+      address: orderData?.address ?? '12 Adeola Odeku St, VI',
+      distanceKm: orderData?.distanceKm,
+    };
+    setPendingOrder(order);
+    OrderBroadcast.broadcastOrder(order);
     toast({
-      title: "Order Placed Successfully! 🎉",
-      description: `Your PODC is ${podc}. Estimated delivery: 15-25 minutes`,
-      duration: 5000,
+      title: 'Request sent 📡',
+      description: 'Notifying nearby filling stations…',
     });
+    setCurrentScreen('order-awaiting');
+  };
 
-    // Navigate to tracking screen
+  const handlePaymentSuccess = (podc: string, station: { stationName: string }) => {
+    toast({
+      title: `Payment confirmed 🎉`,
+      description: `${station.stationName} is preparing your order. PODC: ${podc}`,
+      duration: 6000,
+    });
+    setPendingOrder(null);
     setCurrentScreen('track-order');
   };
 
