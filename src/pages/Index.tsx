@@ -12,7 +12,10 @@ import RoadSignsScreen from '@/components/RoadSignsScreen';
 import CookingGasScreen from '@/components/CookingGasScreen';
 import ServiceNearbyScreen from '@/components/ServiceNearbyScreen';
 import DeliveryProviderRegistrationScreen from '@/components/DeliveryProviderRegistrationScreen';
+import StationIncomingOrdersScreen from '@/components/StationIncomingOrdersScreen';
+import OrderAwaitingScreen from '@/components/OrderAwaitingScreen';
 import AuthScreen from '@/components/AuthScreen';
+import { OrderBroadcast, IncomingOrder } from '@/services/OrderBroadcast';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState('home');
