@@ -108,6 +108,22 @@ const Index = () => {
         return <ServiceNearbyScreen onBack={() => setCurrentScreen('home')} />;
       case 'delivery-provider-registration':
         return <DeliveryProviderRegistrationScreen onBack={() => setCurrentScreen('home')} />;
+      case 'station-incoming':
+        return <StationIncomingOrdersScreen onBack={() => setCurrentScreen('home')} />;
+      case 'order-awaiting':
+        return pendingOrder ? (
+          <OrderAwaitingScreen
+            order={pendingOrder}
+            onPaid={handlePaymentSuccess}
+            onCancel={() => {
+              if (pendingOrder) OrderBroadcast.cancel(pendingOrder.id);
+              setPendingOrder(null);
+              setCurrentScreen('home');
+            }}
+          />
+        ) : (
+          <HomeScreen onNavigate={handleNavigate} />
+        );
       case 'cooking-gas':
         return <CookingGasScreen onBack={() => setCurrentScreen('home')} />;
       case 'search':
