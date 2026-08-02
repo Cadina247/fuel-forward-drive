@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { useFuelProducts } from '@/hooks/useFuelProducts';
 import { 
   Fuel, 
   MapPin, 
@@ -14,7 +15,10 @@ import {
   CreditCard,
   ArrowLeft,
   Plus,
-  Minus
+  Minus,
+  RadioTower,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface OrderFuelScreenProps {
@@ -28,6 +32,12 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const [quantity, setQuantity] = useState(20);
   const [selectedStation, setSelectedStation] = useState('shell-vi');
   const [deliveryProvider, setDeliveryProvider] = useState('in-house');
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+
+  // Live product availability shared with the Petro Pulse Portal
+  const { allProducts, loading: productsLoading, error: productsError, realtimeStatus, lastEventAt } =
+    useFuelProducts({ onlyAvailable: false });
+
 
   const fuelTypes = [
     { id: 'petrol', name: 'Petrol (PMS)', price: 617, icon: '⛽' },
