@@ -82,17 +82,43 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
 
   const selectedProviderData = deliveryProviders.find(p => p.id === deliveryProvider);
 
+  // ---- Live products (from shared backend) ----
+  const liveMode = allProducts.length > 0;
+  const availableProducts = allProducts.filter(p => p.is_available);
+  const liveProduct = allProducts.find(p => p.id === selectedProductId) || null;
+  const liveProductUnavailable = !!liveProduct && !liveProduct.is_available;
+
+  const stationName = (id: string | null) =>
+    stations.find(s => s.id === id)?.name || id || 'Unknown station';
+
+  // Auto-select the first available live product, keep selection valid
+  useEffect(() => {
+    if (!liveMode) return;
+    if (!selectedProductId && availableProducts.length > 0) {
+      setSelectedProductId(availableProducts[0].id);
+    }
+  }, [liveMode, selectedProductId, availableProducts]);
+
   const selectedFuelData = fuelTypes.find(f => f.id === selectedFuel);
   const selectedStationData = stations.find(s => s.id === selectedStation);
   const basePrice = selectedFuelData?.price || 0;
-  const finalPrice = basePrice + (selectedStationData?.priceModifier || 0);
+  const staticPrice = basePrice + (selectedStationData?.priceModifier || 0);
+  const finalPrice = liveMode ? Number(liveProduct?.price ?? 0) : staticPrice;
+  const unitLabel = liveMode ? (liveProduct?.unit || 'L') : (selectedFuelData?.unit || 'L');
+  const productLabel = liveMode ? (liveProduct?.product_name || 'Product') : (selectedFuelData?.name || '');
   const totalAmount = finalPrice * quantity;
   const deliveryFee = totalAmount > 20000 ? 0 : 500;
+  const canOrder = liveMode ? !!liveProduct && liveProduct.is_available : true;
 
 const handlePlaceOrder = () => {
+  if (!canOrder) return;
   const orderData = {
-    fuelType: selectedFuelData,
-    station: selectedStationData,
+    fuelType: liveMode
+      ? { id: liveProduct?.id, name: liveProduct?.product_name, price: liveProduct?.price, unit: liveProduct?.unit }
+      : selectedFuelData,
+    station: liveMode
+      ? { id: liveProduct?.station_id, name: stationName(liveProduct?.station_id ?? null) }
+      : selectedStationData,
     quantity,
     deliveryProvider: deliveryProviders.find(p => p.id === deliveryProvider),
     totalAmount: totalAmount + deliveryFee,
@@ -101,6 +127,7 @@ const handlePlaceOrder = () => {
   };
   onPlaceOrder(orderData);
   };
+
 
   return (
     <div className="p-4 space-y-6">
