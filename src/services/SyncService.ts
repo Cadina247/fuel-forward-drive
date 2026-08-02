@@ -41,7 +41,7 @@ class SyncService {
     syncCount: 0,
   };
 
-  private syncInterval: NodeJS.Timeout | null = null;
+  private syncInterval: ReturnType<typeof setInterval> | null = null;
   private readonly SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   private readonly MIN_SYNC_INTERVAL_MS = 30 * 1000; // 30 seconds minimum
 

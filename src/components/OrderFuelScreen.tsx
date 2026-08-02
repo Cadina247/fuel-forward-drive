@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { useFuelProducts } from '@/hooks/useFuelProducts';
 import { 
   Fuel, 
   MapPin, 
@@ -14,7 +15,10 @@ import {
   CreditCard,
   ArrowLeft,
   Plus,
-  Minus
+  Minus,
+  RadioTower,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface OrderFuelScreenProps {
@@ -28,6 +32,12 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const [quantity, setQuantity] = useState(20);
   const [selectedStation, setSelectedStation] = useState('shell-vi');
   const [deliveryProvider, setDeliveryProvider] = useState('in-house');
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+
+  // Live product availability shared with the Petro Pulse Portal
+  const { allProducts, loading: productsLoading, error: productsError, realtimeStatus, lastEventAt } =
+    useFuelProducts({ onlyAvailable: false });
+
 
   const fuelTypes = [
     { id: 'petrol', name: 'Petrol (PMS)', price: 617, icon: '⛽' },
@@ -72,17 +82,43 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
 
   const selectedProviderData = deliveryProviders.find(p => p.id === deliveryProvider);
 
+  // ---- Live products (from shared backend) ----
+  const liveMode = allProducts.length > 0;
+  const availableProducts = allProducts.filter(p => p.is_available);
+  const liveProduct = allProducts.find(p => p.id === selectedProductId) || null;
+  const liveProductUnavailable = !!liveProduct && !liveProduct.is_available;
+
+  const stationName = (id: string | null) =>
+    stations.find(s => s.id === id)?.name || id || 'Unknown station';
+
+  // Auto-select the first available live product, keep selection valid
+  useEffect(() => {
+    if (!liveMode) return;
+    if (!selectedProductId && availableProducts.length > 0) {
+      setSelectedProductId(availableProducts[0].id);
+    }
+  }, [liveMode, selectedProductId, availableProducts]);
+
   const selectedFuelData = fuelTypes.find(f => f.id === selectedFuel);
   const selectedStationData = stations.find(s => s.id === selectedStation);
   const basePrice = selectedFuelData?.price || 0;
-  const finalPrice = basePrice + (selectedStationData?.priceModifier || 0);
+  const staticPrice = basePrice + (selectedStationData?.priceModifier || 0);
+  const finalPrice = liveMode ? Number(liveProduct?.price ?? 0) : staticPrice;
+  const unitLabel = liveMode ? (liveProduct?.unit || 'L') : (selectedFuelData?.unit || 'L');
+  const productLabel = liveMode ? (liveProduct?.product_name || 'Product') : (selectedFuelData?.name || '');
   const totalAmount = finalPrice * quantity;
   const deliveryFee = totalAmount > 20000 ? 0 : 500;
+  const canOrder = liveMode ? !!liveProduct && liveProduct.is_available : true;
 
 const handlePlaceOrder = () => {
+  if (!canOrder) return;
   const orderData = {
-    fuelType: selectedFuelData,
-    station: selectedStationData,
+    fuelType: liveMode
+      ? { id: liveProduct?.id, name: liveProduct?.product_name, price: liveProduct?.price, unit: liveProduct?.unit }
+      : selectedFuelData,
+    station: liveMode
+      ? { id: liveProduct?.station_id, name: stationName(liveProduct?.station_id ?? null) }
+      : selectedStationData,
     quantity,
     deliveryProvider: deliveryProviders.find(p => p.id === deliveryProvider),
     totalAmount: totalAmount + deliveryFee,
@@ -91,6 +127,7 @@ const handlePlaceOrder = () => {
   };
   onPlaceOrder(orderData);
   };
+
 
   return (
     <div className="p-4 space-y-6">
@@ -102,89 +139,184 @@ const handlePlaceOrder = () => {
         <h1 className="text-xl font-bold">Order Fuel</h1>
       </div>
 
-      {/* Fuel Type Selection */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Select Fuel Type</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {fuelTypes.map((fuel) => (
-            <Card 
-              key={fuel.id}
-              className={`p-4 cursor-pointer transition-all border-2 ${
-                selectedFuel === fuel.id 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-border hover:border-primary/50'
-              }`}
-              onClick={() => setSelectedFuel(fuel.id)}
-            >
-              <div className="text-center space-y-2">
-                <div className="text-2xl">{fuel.icon}</div>
-                <h3 className="font-medium text-sm">{fuel.name}</h3>
-                <p className="text-primary font-semibold">₦{fuel.price}/{fuel.unit || 'L'}</p>
-              </div>
-            </Card>
-          ))}
+      {/* Live availability status */}
+      <Card className="p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <RadioTower className={`h-4 w-4 ${realtimeStatus === 'SUBSCRIBED' ? 'text-green-600' : 'text-muted-foreground'}`} />
+          <span className="font-medium">
+            {realtimeStatus === 'SUBSCRIBED' ? 'Live prices & stock' : 'Connecting to live feed…'}
+          </span>
         </div>
-      </div>
+        <span className="text-xs text-muted-foreground">
+          {productsLoading ? 'Loading…' : lastEventAt ? `Updated ${new Date(lastEventAt).toLocaleTimeString()}` : 'Synced'}
+        </span>
+      </Card>
+      {productsError && (
+        <Card className="p-3 border-destructive/40">
+          <p className="text-sm text-destructive">Could not load live products: {productsError}</p>
+        </Card>
+      )}
 
-      {/* Station Selection */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Choose Station</h2>
+      {liveMode ? (
         <div className="space-y-3">
-          {stations.map((station) => (
-            <Card 
-              key={station.id}
-              className={`p-4 cursor-pointer transition-all border-2 ${
-                selectedStation === station.id 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-border hover:border-primary/50'
-              }`}
-              onClick={() => {
-                setSelectedStation(station.id);
-                if (onStationClick) onStationClick(station.id);
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-medium">{station.name}</h3>
-                    {station.priceModifier < 0 && (
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        Cheaper
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      <span>{station.rating}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{station.deliveryTime}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{station.distance}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-primary">₦{finalPrice}/L</p>
-                  {station.priceModifier !== 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {station.priceModifier > 0 ? '+' : ''}₦{station.priceModifier}
-                    </p>
-                  )}
-                </div>
-              </div>
+          <h2 className="text-lg font-semibold">Available Products</h2>
+          {availableProducts.length === 0 && (
+            <Card className="p-4 text-sm text-muted-foreground">
+              No products are currently available. Please check back shortly.
             </Card>
-          ))}
+          )}
+          <div className="space-y-3">
+            {allProducts
+              .slice()
+              .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+              .map((product) => {
+                const disabled = !product.is_available;
+                return (
+                  <Card
+                    key={product.id}
+                    className={`p-4 transition-all border-2 ${
+                      disabled
+                        ? 'opacity-60 border-border cursor-not-allowed'
+                        : selectedProductId === product.id
+                        ? 'border-primary bg-primary/5 cursor-pointer'
+                        : 'border-border hover:border-primary/50 cursor-pointer'
+                    }`}
+                    onClick={() => {
+                      if (disabled) return;
+                      setSelectedProductId(product.id);
+                      if (product.station_id && onStationClick) setSelectedStation(product.station_id);
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium">{product.product_name}</h3>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{stationName(product.station_id)}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-primary">
+                          ₦{Number(product.price ?? 0).toLocaleString()}/{product.unit || 'L'}
+                        </p>
+                        {disabled ? (
+                          <Badge variant="secondary" className="text-destructive">Currently unavailable</Badge>
+                        ) : (
+                          <p className="text-xs text-green-600">
+                            {product.quantity_available != null
+                              ? `${Number(product.quantity_available).toLocaleString()} ${product.unit || 'L'} in stock`
+                              : 'Available'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+          </div>
+          {liveProductUnavailable && (
+            <Card className="p-3 border-destructive/40 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
+              <p className="text-sm text-destructive">
+                {liveProduct?.product_name} just became unavailable at {stationName(liveProduct?.station_id ?? null)}.
+                Please pick another product.
+              </p>
+            </Card>
+          )}
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Fuel Type Selection */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Select Fuel Type</h2>
+            {productsLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Checking live availability…
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              {fuelTypes.map((fuel) => (
+                <Card 
+                  key={fuel.id}
+                  className={`p-4 cursor-pointer transition-all border-2 ${
+                    selectedFuel === fuel.id 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => setSelectedFuel(fuel.id)}
+                >
+                  <div className="text-center space-y-2">
+                    <div className="text-2xl">{fuel.icon}</div>
+                    <h3 className="font-medium text-sm">{fuel.name}</h3>
+                    <p className="text-primary font-semibold">₦{fuel.price}/{fuel.unit || 'L'}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Station Selection */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Choose Station</h2>
+            <div className="space-y-3">
+              {stations.map((station) => (
+                <Card 
+                  key={station.id}
+                  className={`p-4 cursor-pointer transition-all border-2 ${
+                    selectedStation === station.id 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => {
+                    setSelectedStation(station.id);
+                    if (onStationClick) onStationClick(station.id);
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium">{station.name}</h3>
+                        {station.priceModifier < 0 && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            Cheaper
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                          <span>{station.rating}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{station.deliveryTime}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          <span>{station.distance}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-primary">₦{finalPrice}/L</p>
+                      {station.priceModifier !== 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {station.priceModifier > 0 ? '+' : ''}₦{station.priceModifier}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
 
       {/* Quantity Selection */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Quantity ({selectedFuelData?.unit || 'Liters'})</h2>
+        <h2 className="text-lg font-semibold">Quantity ({unitLabel})</h2>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <Button 
@@ -273,7 +405,7 @@ const handlePlaceOrder = () => {
         <h3 className="font-semibold mb-3">Order Summary</h3>
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span>{selectedFuelData?.name} ({quantity} {selectedFuelData?.unit || 'L'})</span>
+            <span>{productLabel} ({quantity} {unitLabel})</span>
             <span>₦{totalAmount.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
@@ -319,11 +451,15 @@ const handlePlaceOrder = () => {
         variant="fuel" 
         size="xl" 
         className="w-full"
+        disabled={!canOrder}
         onClick={handlePlaceOrder}
       >
         <Fuel className="h-5 w-5 mr-2" />
-        Place Order - ₦{(totalAmount + deliveryFee).toLocaleString()}
+        {canOrder
+          ? `Place Order - ₦${(totalAmount + deliveryFee).toLocaleString()}`
+          : 'Currently unavailable'}
       </Button>
+
     </div>
   );
 };
