@@ -316,7 +316,7 @@ const handlePlaceOrder = () => {
 
       {/* Quantity Selection */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Quantity ({selectedFuelData?.unit || 'Liters'})</h2>
+        <h2 className="text-lg font-semibold">Quantity ({unitLabel})</h2>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <Button 
