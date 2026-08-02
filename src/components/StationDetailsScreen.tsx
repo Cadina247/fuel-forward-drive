@@ -195,8 +195,49 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
 
       {/* Fuel Availability */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Fuel Availability</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Fuel Availability</h2>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <RadioTower className={`h-3.5 w-3.5 ${realtimeStatus === 'SUBSCRIBED' ? 'text-green-600' : ''}`} />
+            {realtimeStatus === 'SUBSCRIBED' ? 'Live' : 'Connecting…'}
+          </div>
+        </div>
+        {liveMode ? (
+          <div className="space-y-3">
+            {allProducts
+              .slice()
+              .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+              .map((product) => (
+                <Card key={product.id} className={`p-4 ${product.is_available ? '' : 'opacity-60'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">{product.product_name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {product.quantity_available != null
+                          ? `${Number(product.quantity_available).toLocaleString()} ${product.unit || 'L'} in stock`
+                          : 'Stock level unknown'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-semibold text-primary">
+                          ₦{Number(product.price ?? 0).toLocaleString()}/{product.unit || 'L'}
+                        </p>
+                        <p className={`text-xs ${product.is_available ? 'text-green-600' : 'text-red-600'}`}>
+                          {product.is_available ? 'Available' : 'Currently unavailable'}
+                        </p>
+                      </div>
+                      {product.is_available
+                        ? <CheckCircle className="h-5 w-5 text-green-500" />
+                        : <XCircle className="h-5 w-5 text-red-500" />}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+          </div>
+        ) : (
         <div className="space-y-3">
+
           {fuelTypes.map((fuel) => {
             const fuelData = availability[fuel.id as keyof typeof availability];
             return (
