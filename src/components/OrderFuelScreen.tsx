@@ -451,11 +451,15 @@ const handlePlaceOrder = () => {
         variant="fuel" 
         size="xl" 
         className="w-full"
+        disabled={!canOrder}
         onClick={handlePlaceOrder}
       >
         <Fuel className="h-5 w-5 mr-2" />
-        Place Order - ₦{(totalAmount + deliveryFee).toLocaleString()}
+        {canOrder
+          ? `Place Order - ₦${(totalAmount + deliveryFee).toLocaleString()}`
+          : 'Currently unavailable'}
       </Button>
+
     </div>
   );
 };
