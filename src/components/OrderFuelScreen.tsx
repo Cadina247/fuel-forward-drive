@@ -405,7 +405,7 @@ const handlePlaceOrder = () => {
         <h3 className="font-semibold mb-3">Order Summary</h3>
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span>{selectedFuelData?.name} ({quantity} {selectedFuelData?.unit || 'L'})</span>
+            <span>{productLabel} ({quantity} {unitLabel})</span>
             <span>₦{totalAmount.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
