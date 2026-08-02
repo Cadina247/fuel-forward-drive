@@ -119,6 +119,11 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
   const availability = fuelAvailability[stationId as keyof typeof fuelAvailability];
   const services = stationServices[stationId as keyof typeof stationServices];
 
+  // Live products for this station from the shared backend
+  const { allProducts, realtimeStatus } = useFuelProducts({ onlyAvailable: false, stationId });
+  const liveMode = allProducts.length > 0;
+
+
   const getStockColor = (stock: string) => {
     switch (stock) {
       case 'High': return 'text-green-600';
