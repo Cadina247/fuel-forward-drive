@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useFuelProducts } from '@/hooks/useFuelProducts';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -13,8 +14,10 @@ import {
   Fuel,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  RadioTower
 } from 'lucide-react';
+
 
 interface StationDetailsScreenProps {
   onBack: () => void;
