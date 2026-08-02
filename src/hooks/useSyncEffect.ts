@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
-import { syncService } from './SyncService';
+import { syncService } from '@/services/SyncService';
 
 /**
  * Hook to initialize and manage the sync service
