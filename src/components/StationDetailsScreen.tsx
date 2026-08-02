@@ -271,7 +271,9 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
             );
           })}
         </div>
+        )}
       </div>
+
 
       {/* Other Services */}
       <div className="space-y-3">
