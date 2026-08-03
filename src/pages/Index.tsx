@@ -163,9 +163,21 @@ const Index = () => {
           </div>
         );
       default:
-        return <HomeScreen onNavigate={handleNavigate} />;
+        return <HomeScreen onNavigate={handleNavigate} userName={userName} />;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-background">
+        <p className="text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthScreen />;
+  }
 
   return (
     <Layout activeTab={activeTab} onTabChange={handleTabChange}>
@@ -173,5 +185,6 @@ const Index = () => {
     </Layout>
   );
 };
+
 
 export default Index;
