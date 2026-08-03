@@ -146,7 +146,8 @@ const Index = () => {
           </div>
         );
       case 'profile':
-        return <AuthScreen />;
+        return <ProfileScreen />;
+
       case 'prohibited-parking':
         return (
           <div className="p-4">
