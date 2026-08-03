@@ -15,6 +15,8 @@ import DeliveryProviderRegistrationScreen from '@/components/DeliveryProviderReg
 import StationIncomingOrdersScreen from '@/components/StationIncomingOrdersScreen';
 import OrderAwaitingScreen from '@/components/OrderAwaitingScreen';
 import AuthScreen from '@/components/AuthScreen';
+import ProfileScreen from '@/components/ProfileScreen';
+import { useAuth } from '@/contexts/AuthContext';
 import { OrderBroadcast, IncomingOrder } from '@/services/OrderBroadcast';
 
 const Index = () => {
@@ -23,6 +25,9 @@ const Index = () => {
   const [selectedStationId, setSelectedStationId] = useState<string>('');
   const [pendingOrder, setPendingOrder] = useState<IncomingOrder | null>(null);
   const { toast } = useToast();
+  const { session, profile, loading } = useAuth();
+  const userName = profile?.full_name ?? undefined;
+
 
   const handleNavigate = (screen: string) => {
     setCurrentScreen(screen);
