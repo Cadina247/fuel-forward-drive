@@ -40,8 +40,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .select('id, full_name, email, phone')
       .eq('id', userId)
       .maybeSingle()
-    if (!error) setProfile((data as Profile) ?? null)
+    if (error) return
+    if (data) {
+      setProfile(data as Profile)
+      return
+    }
+    // Fallback: create the profile row from auth metadata on first login.
+    const { data: userRes } = await supabase.auth.getUser()
+    const u = userRes?.user
+    if (!u) return
+    const row = {
+      id: u.id,
+      full_name: (u.user_metadata?.full_name as string) ?? null,
+      email: u.email ?? (u.user_metadata?.email as string) ?? null,
+      phone: u.phone ?? (u.user_metadata?.phone as string) ?? null,
+    }
+    const { data: inserted } = await supabase
+      .from('profiles')
+      .upsert(row, { onConflict: 'id' })
+      .select('id, full_name, email, phone')
+      .maybeSingle()
+    setProfile((inserted as Profile) ?? (row as Profile))
   }, [])
+
 
   useEffect(() => {
     // 1) Register the listener first so no event is missed.
