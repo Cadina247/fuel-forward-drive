@@ -82,7 +82,8 @@ const Index = () => {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home':
-        return <HomeScreen onNavigate={handleNavigate} />;
+        return <HomeScreen onNavigate={handleNavigate} userName={userName} />;
+
       case 'order-fuel':
         return (
           <OrderFuelScreen 
