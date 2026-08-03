@@ -22,18 +22,21 @@ import AdSenseBanner from '@/components/ads/AdSenseBanner';
 
 interface HomeScreenProps {
   onNavigate: (screen: string) => void;
+  userName?: string;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, userName }) => {
+  const firstName = (userName || '').trim().split(' ')[0] || 'there';
   return (
     <div className="p-4 space-y-6">
       {/* Welcome Section */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Good morning, Obehi! ☀️</h1>
+            <h1 className="text-2xl font-bold text-foreground">Good morning, {firstName}! ☀️</h1>
             <p className="text-muted-foreground">Ready for fuel delivery?</p>
           </div>
+
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
             <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full"></div>

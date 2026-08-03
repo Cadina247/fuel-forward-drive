@@ -15,6 +15,8 @@ import DeliveryProviderRegistrationScreen from '@/components/DeliveryProviderReg
 import StationIncomingOrdersScreen from '@/components/StationIncomingOrdersScreen';
 import OrderAwaitingScreen from '@/components/OrderAwaitingScreen';
 import AuthScreen from '@/components/AuthScreen';
+import ProfileScreen from '@/components/ProfileScreen';
+import { useAuth } from '@/contexts/AuthContext';
 import { OrderBroadcast, IncomingOrder } from '@/services/OrderBroadcast';
 
 const Index = () => {
@@ -23,6 +25,9 @@ const Index = () => {
   const [selectedStationId, setSelectedStationId] = useState<string>('');
   const [pendingOrder, setPendingOrder] = useState<IncomingOrder | null>(null);
   const { toast } = useToast();
+  const { session, profile, loading } = useAuth();
+  const userName = profile?.full_name ?? undefined;
+
 
   const handleNavigate = (screen: string) => {
     setCurrentScreen(screen);
@@ -77,7 +82,8 @@ const Index = () => {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home':
-        return <HomeScreen onNavigate={handleNavigate} />;
+        return <HomeScreen onNavigate={handleNavigate} userName={userName} />;
+
       case 'order-fuel':
         return (
           <OrderFuelScreen 
@@ -141,7 +147,8 @@ const Index = () => {
           </div>
         );
       case 'profile':
-        return <AuthScreen />;
+        return <ProfileScreen />;
+
       case 'prohibited-parking':
         return (
           <div className="p-4">
@@ -157,9 +164,21 @@ const Index = () => {
           </div>
         );
       default:
-        return <HomeScreen onNavigate={handleNavigate} />;
+        return <HomeScreen onNavigate={handleNavigate} userName={userName} />;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-background">
+        <p className="text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthScreen />;
+  }
 
   return (
     <Layout activeTab={activeTab} onTabChange={handleTabChange}>
@@ -167,5 +186,6 @@ const Index = () => {
     </Layout>
   );
 };
+
 
 export default Index;
