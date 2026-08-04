@@ -50,6 +50,18 @@ const Index = () => {
   };
 
   const handlePlaceOrder = (orderData: any) => {
+    // New flow: the customer already picked a specific station, so we skip the
+    // broadcast/auction and record the order with a pending payment state.
+    if (orderData?.paymentStatus === 'pending') {
+      toast({
+        title: 'Order placed 🚚',
+        description: `${orderData.station?.name} will confirm shortly. Payment is pending.`,
+        duration: 6000,
+      });
+      setTimeout(() => setCurrentScreen('track-order'), 1500);
+      return;
+    }
+
     const order: IncomingOrder = {
       id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       createdAt: Date.now(),
