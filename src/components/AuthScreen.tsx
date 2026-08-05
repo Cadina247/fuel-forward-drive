@@ -134,7 +134,7 @@ const AuthScreen: React.FC = () => {
 
   const renderPhoneFlow = (withName: boolean, keyPrefix: string) =>
     !otpSent ? (
-      <form onSubmit={sendOtp} className="space-y-4">
+      <form key={`${keyPrefix}-otp-send`} onSubmit={sendOtp} className="space-y-4">
         {withName && (
           <div className="space-y-2">
             <Label htmlFor={`${keyPrefix}-otp-name`}>Full name</Label>
@@ -187,7 +187,7 @@ const AuthScreen: React.FC = () => {
         </Button>
       </form>
     ) : (
-      <form onSubmit={verifyOtp} className="space-y-4">
+      <form key={`${keyPrefix}-otp-verify`} onSubmit={verifyOtp} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor={`${keyPrefix}-otp-code`}>6-digit code</Label>
           <Input
@@ -233,7 +233,7 @@ const AuthScreen: React.FC = () => {
           <TabsContent value="login" className="mt-4">
             {renderMethodSwitch()}
             {method === 'email' ? (
-              <form onSubmit={onEmailSignIn} className="space-y-4">
+              <form key="email-signin" onSubmit={onEmailSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
                   <Input
@@ -275,7 +275,7 @@ const AuthScreen: React.FC = () => {
           <TabsContent value="signup" className="mt-4">
             {renderMethodSwitch()}
             {method === 'email' ? (
-              <form onSubmit={onEmailSignUp} className="space-y-4">
+              <form key="email-signup" onSubmit={onEmailSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full name</Label>
                   <Input id="signup-name" name="full_name" placeholder="Obehi Osagie" autoComplete="name" autoCapitalize="words" required />
