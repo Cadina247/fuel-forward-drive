@@ -110,7 +110,10 @@ const AuthScreen: React.FC = () => {
     }
   }
 
-  const MethodSwitch = () => (
+  // NOTE: these are plain render functions (not nested components) so React does
+  // not unmount/remount the inputs on every keystroke — that was causing the
+  // keyboard to close and focus to be lost mid-typing on mobile.
+  const renderMethodSwitch = () => (
     <div className="grid grid-cols-2 gap-2 mb-4">
       <Button
         type="button"
@@ -129,26 +132,33 @@ const AuthScreen: React.FC = () => {
     </div>
   )
 
-  const PhoneFlow = ({ withName }: { withName: boolean }) =>
+  const renderPhoneFlow = (withName: boolean, keyPrefix: string) =>
     !otpSent ? (
       <form onSubmit={sendOtp} className="space-y-4">
         {withName && (
           <div className="space-y-2">
-            <Label htmlFor="otp-name">Full name</Label>
+            <Label htmlFor={`${keyPrefix}-otp-name`}>Full name</Label>
             <Input
-              id="otp-name"
+              id={`${keyPrefix}-otp-name`}
               value={otpName}
               onChange={(e) => setOtpName(e.target.value)}
               placeholder="Obehi Osagie"
+              autoComplete="name"
+              autoCapitalize="words"
               required
             />
           </div>
         )}
         <div className="space-y-2">
-          <Label htmlFor="otp-phone">Phone number</Label>
+          <Label htmlFor={`${keyPrefix}-otp-phone`}>Phone number</Label>
           <Input
-            id="otp-phone"
+            id={`${keyPrefix}-otp-phone`}
             type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
             value={otpPhone}
             onChange={(e) => setOtpPhone(e.target.value)}
             placeholder="+2348012345678"
@@ -157,10 +167,15 @@ const AuthScreen: React.FC = () => {
         </div>
         {withName && (
           <div className="space-y-2">
-            <Label htmlFor="otp-email">Email (optional)</Label>
+            <Label htmlFor={`${keyPrefix}-otp-email`}>Email (optional)</Label>
             <Input
-              id="otp-email"
+              id={`${keyPrefix}-otp-email`}
               type="email"
+              inputMode="email"
+              autoComplete="email"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               value={otpEmail}
               onChange={(e) => setOtpEmail(e.target.value)}
               placeholder="you@example.com"
@@ -174,12 +189,16 @@ const AuthScreen: React.FC = () => {
     ) : (
       <form onSubmit={verifyOtp} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="otp-code">6-digit code</Label>
+          <Label htmlFor={`${keyPrefix}-otp-code`}>6-digit code</Label>
           <Input
-            id="otp-code"
+            id={`${keyPrefix}-otp-code`}
+            type="text"
             inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="one-time-code"
+            maxLength={6}
             value={otpCode}
-            onChange={(e) => setOtpCode(e.target.value)}
+            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
             placeholder="123456"
             required
           />
@@ -192,6 +211,7 @@ const AuthScreen: React.FC = () => {
         </Button>
       </form>
     )
+
 
   return (
     <div className="min-h-screen bg-gradient-background flex flex-col justify-center p-4 max-w-md mx-auto">
