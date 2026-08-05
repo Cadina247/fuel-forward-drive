@@ -231,54 +231,107 @@ const AuthScreen: React.FC = () => {
           </TabsList>
 
           <TabsContent value="login" className="mt-4">
-            <MethodSwitch />
+            {renderMethodSwitch()}
             {method === 'email' ? (
               <form onSubmit={onEmailSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" name="email" type="email" placeholder="you@example.com" required />
+                  <Input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder="you@example.com"
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
-                  <Input id="login-password" name="password" type="password" placeholder="••••••••" required />
+                  <Input
+                    id="login-password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder="••••••••"
+                    required
+                  />
                 </div>
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Please wait…' : 'Login'}
                 </Button>
               </form>
             ) : (
-              <PhoneFlow withName={false} />
+              renderPhoneFlow(false, 'login')
             )}
           </TabsContent>
 
           <TabsContent value="signup" className="mt-4">
-            <MethodSwitch />
+            {renderMethodSwitch()}
             {method === 'email' ? (
               <form onSubmit={onEmailSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full name</Label>
-                  <Input id="signup-name" name="full_name" placeholder="Obehi Osagie" required />
+                  <Input id="signup-name" name="full_name" placeholder="Obehi Osagie" autoComplete="name" autoCapitalize="words" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
-                  <Input id="signup-email" name="email" type="email" placeholder="you@example.com" required />
+                  <Input
+                    id="signup-email"
+                    name="email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder="you@example.com"
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-phone">Phone (optional)</Label>
-                  <Input id="signup-phone" name="phone" type="tel" placeholder="+2348012345678" />
+                  <Input
+                    id="signup-phone"
+                    name="phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder="+2348012345678"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
-                  <Input id="signup-password" name="password" type="password" placeholder="Create a strong password" required />
+                  <Input
+                    id="signup-password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder="Create a strong password"
+                    required
+                  />
                 </div>
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Creating…' : 'Create Account'}
                 </Button>
               </form>
             ) : (
-              <PhoneFlow withName />
+              renderPhoneFlow(true, 'signup')
             )}
           </TabsContent>
+
         </Tabs>
       </Card>
     </div>
