@@ -101,7 +101,6 @@ const Index = () => {
           <OrderFuelScreen 
             onBack={() => setCurrentScreen('home')} 
             onPlaceOrder={handlePlaceOrder}
-            onStationClick={handleStationClick}
           />
         );
       case 'station-details':
