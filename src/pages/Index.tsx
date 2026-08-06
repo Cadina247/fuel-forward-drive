@@ -57,12 +57,15 @@ const Index = () => {
     if (orderData?.paymentStatus === 'pending') {
       toast({
         title: 'Order placed 🚚',
-        description: `${orderData.station?.name} will confirm shortly. Payment is pending.`,
+        description: orderData?.walletPaid
+          ? `${orderData.station?.name} will confirm shortly. Paid from wallet.`
+          : `${orderData.station?.name} will confirm shortly. Payment is pending.`,
         duration: 6000,
       });
       setTimeout(() => setCurrentScreen('track-order'), 1500);
       return;
     }
+
 
     const order: IncomingOrder = {
       id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
