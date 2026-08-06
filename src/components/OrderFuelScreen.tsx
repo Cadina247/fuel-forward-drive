@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { useFuelProducts } from '@/hooks/useFuelProducts';
 import { useNearbyStations, NearbyStation } from '@/hooks/useNearbyStations';
+import { useWallet } from '@/hooks/useWallet';
 import {
+
   Fuel,
   MapPin,
   Star,
@@ -65,9 +67,13 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const [address, setAddress] = useState('15 Admiralty Way, Lekki Phase 1, Lagos');
   const [deliveryProvider, setDeliveryProvider] = useState<'in-house' | 'third-party'>('in-house');
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card'>('wallet');
-  const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'pending'>('idle');
+  const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'pending' | 'paid'>('idle');
+  const [walletError, setWalletError] = useState<string | null>(null);
+
+  const { wallet, balance, loading: walletLoading, spend } = useWallet();
 
   const { stations, locating } = useNearbyStations(radiusKm);
+
 
   // Station-scoped live products from the shared backend.
   const { allProducts, loading: productsLoading, error: productsError, realtimeStatus, lastEventAt } =
