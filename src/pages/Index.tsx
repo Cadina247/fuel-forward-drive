@@ -103,8 +103,12 @@ const Index = () => {
           <OrderFuelScreen 
             onBack={() => setCurrentScreen('home')} 
             onPlaceOrder={handlePlaceOrder}
+            onFundWallet={() => setCurrentScreen('fund-wallet')}
           />
         );
+      case 'fund-wallet':
+        return <FundWalletScreen onBack={() => setCurrentScreen('profile')} />;
+
       case 'station-details':
         return (
           <StationDetailsScreen 
@@ -160,7 +164,8 @@ const Index = () => {
           </div>
         );
       case 'profile':
-        return <ProfileScreen />;
+        return <ProfileScreen onNavigate={handleNavigate} />;
+
 
       case 'prohibited-parking':
         return (
