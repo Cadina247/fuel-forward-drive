@@ -468,13 +468,38 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
               }`}
               onClick={() => setPaymentMethod('wallet')}
             >
-              <div className="flex items-center gap-3">
-                <Wallet className="h-5 w-5 text-primary" />
-                <div>
-                  <h3 className="font-medium">Wallet</h3>
-                  <p className="text-xs text-muted-foreground">Pay from your FuelNow balance</p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="font-medium">Wallet</h3>
+                    <p className="text-xs text-muted-foreground">Pay from your FuelNow balance</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Balance</p>
+                  <p className="font-semibold text-primary">
+                    {walletLoading ? '—' : `₦${balance.toLocaleString()}`}
+                  </p>
                 </div>
               </div>
+              {paymentMethod === 'wallet' && !walletLoading && balance < total && (
+                <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between gap-2">
+                  <p className="text-xs text-destructive">
+                    Insufficient balance — fund wallet (₦{(total - balance).toLocaleString()} short)
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFundWallet?.();
+                    }}
+                  >
+                    Fund Wallet
+                  </Button>
+                </div>
+              )}
             </Card>
             <Card
               className={`p-4 cursor-pointer border-2 transition-all ${
@@ -492,13 +517,29 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
             </Card>
           </div>
 
-          {paymentState === 'pending' ? (
+          {walletError && (
+            <Card className="p-3 border-destructive/40">
+              <p className="text-sm text-destructive">{walletError}</p>
+            </Card>
+          )}
+
+          {paymentState === 'paid' ? (
+            <Card className="p-4 border-primary/40 flex items-start gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium">Paid from wallet</p>
+                <p className="text-muted-foreground text-xs">
+                  ₦{total.toLocaleString()} debited. {station.name} has been notified of your order.
+                </p>
+              </div>
+            </Card>
+          ) : paymentState === 'pending' ? (
             <Card className="p-4 border-primary/40 flex items-start gap-2">
               <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium">Order placed — payment pending</p>
+                <p className="font-medium">Order placed — payment confirmation pending</p>
                 <p className="text-muted-foreground text-xs">
-                  Live payments aren't enabled yet. {station.name} has been notified of your order.
+                  Live card/bank payments aren't enabled yet. {station.name} has been notified of your order.
                 </p>
               </div>
             </Card>
@@ -507,7 +548,10 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
               variant="fuel"
               size="xl"
               className="w-full"
-              disabled={paymentState === 'processing'}
+              disabled={
+                paymentState === 'processing' ||
+                (paymentMethod === 'wallet' && (walletLoading || balance < total))
+              }
               onClick={handlePay}
             >
               {paymentState === 'processing' ? (
@@ -517,6 +561,7 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
               )}
             </Button>
           )}
+
         </>
       )}
     </div>
