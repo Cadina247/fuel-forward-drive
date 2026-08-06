@@ -29,7 +29,9 @@ interface OrderFuelScreenProps {
   onBack: () => void;
   onPlaceOrder: (orderData: any) => void;
   onStationClick?: (stationId: string) => void;
+  onFundWallet?: () => void;
 }
+
 
 type Step = 'browse' | 'products' | 'delivery' | 'checkout';
 
