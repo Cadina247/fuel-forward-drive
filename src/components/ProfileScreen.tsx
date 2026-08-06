@@ -2,14 +2,20 @@ import React from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import WalletCard from '@/components/WalletCard'
 import { LogOut, Mail, Phone, User as UserIcon } from 'lucide-react'
 
-const ProfileScreen: React.FC = () => {
+interface ProfileScreenProps {
+  onNavigate?: (screen: string) => void
+}
+
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
   const { profile, user, signOut } = useAuth()
 
   const name = profile?.full_name || 'FuelNow user'
   const email = profile?.email || user?.email || '—'
   const phone = profile?.phone || user?.phone || '—'
+
 
   return (
     <div className="p-4 space-y-6">
