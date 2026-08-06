@@ -50,6 +50,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
         </div>
       </Card>
 
+      <WalletCard onFundWallet={() => onNavigate?.('fund-wallet')} />
+
+
       <Button variant="destructive" className="w-full" onClick={signOut}>
         <LogOut className="h-4 w-4 mr-2" /> Log out
       </Button>

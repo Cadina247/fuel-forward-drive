@@ -15,6 +15,8 @@ import DeliveryProviderRegistrationScreen from '@/components/DeliveryProviderReg
 import StationIncomingOrdersScreen from '@/components/StationIncomingOrdersScreen';
 import OrderAwaitingScreen from '@/components/OrderAwaitingScreen';
 import AuthScreen from '@/components/AuthScreen';
+import FundWalletScreen from '@/components/FundWalletScreen';
+
 import ProfileScreen from '@/components/ProfileScreen';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrderBroadcast, IncomingOrder } from '@/services/OrderBroadcast';
