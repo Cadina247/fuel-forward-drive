@@ -56,7 +56,7 @@ const STEP_LABELS: Record<Step, string> = {
   checkout: 'Checkout',
 };
 
-const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder, onStationClick }) => {
+const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder, onStationClick, onFundWallet }) => {
   const [step, setStep] = useState<Step>('browse');
   const [radiusKm, setRadiusKm] = useState(15);
   const [station, setStation] = useState<NearbyStation | null>(null);
