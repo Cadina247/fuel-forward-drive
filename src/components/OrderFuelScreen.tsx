@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { useFuelProducts } from '@/hooks/useFuelProducts';
 import { useNearbyStations, NearbyStation } from '@/hooks/useNearbyStations';
+import { useWallet } from '@/hooks/useWallet';
 import {
+
   Fuel,
   MapPin,
   Star,
@@ -29,7 +31,9 @@ interface OrderFuelScreenProps {
   onBack: () => void;
   onPlaceOrder: (orderData: any) => void;
   onStationClick?: (stationId: string) => void;
+  onFundWallet?: () => void;
 }
+
 
 type Step = 'browse' | 'products' | 'delivery' | 'checkout';
 
@@ -54,7 +58,7 @@ const STEP_LABELS: Record<Step, string> = {
   checkout: 'Checkout',
 };
 
-const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder, onStationClick }) => {
+const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder, onStationClick, onFundWallet }) => {
   const [step, setStep] = useState<Step>('browse');
   const [radiusKm, setRadiusKm] = useState(15);
   const [station, setStation] = useState<NearbyStation | null>(null);
@@ -63,9 +67,13 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const [address, setAddress] = useState('15 Admiralty Way, Lekki Phase 1, Lagos');
   const [deliveryProvider, setDeliveryProvider] = useState<'in-house' | 'third-party'>('in-house');
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card'>('wallet');
-  const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'pending'>('idle');
+  const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'pending' | 'paid'>('idle');
+  const [walletError, setWalletError] = useState<string | null>(null);
+
+  const { wallet, balance, loading: walletLoading, spend } = useWallet();
 
   const { stations, locating } = useNearbyStations(radiusKm);
+
 
   // Station-scoped live products from the shared backend.
   const { allProducts, loading: productsLoading, error: productsError, realtimeStatus, lastEventAt } =
@@ -97,31 +105,54 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
     return setStep('delivery');
   };
 
-  const handlePay = () => {
+  const emitOrder = (paymentStatus: 'pending' | 'paid') => {
     if (!product || !station) return;
+    onPlaceOrder({
+      fuelType: { id: product.id, name: product.product_name, price: pricePerUnit, unit },
+      station: { id: station.id, name: station.name },
+      quantity,
+      unit,
+      address,
+      distanceKm: station.distanceKm,
+      deliveryProvider: {
+        id: deliveryProvider,
+        name: deliveryProvider === 'in-house' ? 'Station Delivery' : 'Third-Party Delivery',
+        isInHouse: deliveryProvider === 'in-house',
+      },
+      deliveryFee,
+      totalAmount: total,
+      paymentMethod,
+      paymentStatus: 'pending',
+      walletPaid: paymentStatus === 'paid',
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  const handlePay = async () => {
+    if (!product || !station) return;
+
+    if (paymentMethod === 'wallet') {
+      if (walletLoading || !wallet) return;
+      if (balance < total) return;
+      setPaymentState('processing');
+      try {
+        await spend(total, `Fuel order — ${product.product_name} (${quantity}${unit}) @ ${station.name}`);
+        setPaymentState('paid');
+        emitOrder('paid');
+      } catch (e: any) {
+        setPaymentState('idle');
+        setWalletError(e.message || 'Wallet payment failed');
+      }
+      return;
+    }
+
     setPaymentState('processing');
     setTimeout(() => {
       setPaymentState('pending');
-      onPlaceOrder({
-        fuelType: { id: product.id, name: product.product_name, price: pricePerUnit, unit },
-        station: { id: station.id, name: station.name },
-        quantity,
-        unit,
-        address,
-        distanceKm: station.distanceKm,
-        deliveryProvider: {
-          id: deliveryProvider,
-          name: deliveryProvider === 'in-house' ? 'Station Delivery' : 'Third-Party Delivery',
-          isInHouse: deliveryProvider === 'in-house',
-        },
-        deliveryFee,
-        totalAmount: total,
-        paymentMethod,
-        paymentStatus: 'pending',
-        timestamp: new Date().toISOString(),
-      });
+      emitOrder('pending');
     }, 1200);
   };
+
 
   return (
     <div className="p-4 space-y-6">
@@ -437,13 +468,38 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
               }`}
               onClick={() => setPaymentMethod('wallet')}
             >
-              <div className="flex items-center gap-3">
-                <Wallet className="h-5 w-5 text-primary" />
-                <div>
-                  <h3 className="font-medium">Wallet</h3>
-                  <p className="text-xs text-muted-foreground">Pay from your FuelNow balance</p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="font-medium">Wallet</h3>
+                    <p className="text-xs text-muted-foreground">Pay from your FuelNow balance</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Balance</p>
+                  <p className="font-semibold text-primary">
+                    {walletLoading ? '—' : `₦${balance.toLocaleString()}`}
+                  </p>
                 </div>
               </div>
+              {paymentMethod === 'wallet' && !walletLoading && balance < total && (
+                <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between gap-2">
+                  <p className="text-xs text-destructive">
+                    Insufficient balance — fund wallet (₦{(total - balance).toLocaleString()} short)
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFundWallet?.();
+                    }}
+                  >
+                    Fund Wallet
+                  </Button>
+                </div>
+              )}
             </Card>
             <Card
               className={`p-4 cursor-pointer border-2 transition-all ${
@@ -461,13 +517,29 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
             </Card>
           </div>
 
-          {paymentState === 'pending' ? (
+          {walletError && (
+            <Card className="p-3 border-destructive/40">
+              <p className="text-sm text-destructive">{walletError}</p>
+            </Card>
+          )}
+
+          {paymentState === 'paid' ? (
+            <Card className="p-4 border-primary/40 flex items-start gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium">Paid from wallet</p>
+                <p className="text-muted-foreground text-xs">
+                  ₦{total.toLocaleString()} debited. {station.name} has been notified of your order.
+                </p>
+              </div>
+            </Card>
+          ) : paymentState === 'pending' ? (
             <Card className="p-4 border-primary/40 flex items-start gap-2">
               <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium">Order placed — payment pending</p>
+                <p className="font-medium">Order placed — payment confirmation pending</p>
                 <p className="text-muted-foreground text-xs">
-                  Live payments aren't enabled yet. {station.name} has been notified of your order.
+                  Live card/bank payments aren't enabled yet. {station.name} has been notified of your order.
                 </p>
               </div>
             </Card>
@@ -476,7 +548,10 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
               variant="fuel"
               size="xl"
               className="w-full"
-              disabled={paymentState === 'processing'}
+              disabled={
+                paymentState === 'processing' ||
+                (paymentMethod === 'wallet' && (walletLoading || balance < total))
+              }
               onClick={handlePay}
             >
               {paymentState === 'processing' ? (
@@ -486,6 +561,7 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
               )}
             </Button>
           )}
+
         </>
       )}
     </div>

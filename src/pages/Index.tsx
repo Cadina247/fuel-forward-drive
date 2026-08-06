@@ -15,6 +15,8 @@ import DeliveryProviderRegistrationScreen from '@/components/DeliveryProviderReg
 import StationIncomingOrdersScreen from '@/components/StationIncomingOrdersScreen';
 import OrderAwaitingScreen from '@/components/OrderAwaitingScreen';
 import AuthScreen from '@/components/AuthScreen';
+import FundWalletScreen from '@/components/FundWalletScreen';
+
 import ProfileScreen from '@/components/ProfileScreen';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrderBroadcast, IncomingOrder } from '@/services/OrderBroadcast';
@@ -55,12 +57,15 @@ const Index = () => {
     if (orderData?.paymentStatus === 'pending') {
       toast({
         title: 'Order placed 🚚',
-        description: `${orderData.station?.name} will confirm shortly. Payment is pending.`,
+        description: orderData?.walletPaid
+          ? `${orderData.station?.name} will confirm shortly. Paid from wallet.`
+          : `${orderData.station?.name} will confirm shortly. Payment is pending.`,
         duration: 6000,
       });
       setTimeout(() => setCurrentScreen('track-order'), 1500);
       return;
     }
+
 
     const order: IncomingOrder = {
       id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -101,8 +106,12 @@ const Index = () => {
           <OrderFuelScreen 
             onBack={() => setCurrentScreen('home')} 
             onPlaceOrder={handlePlaceOrder}
+            onFundWallet={() => setCurrentScreen('fund-wallet')}
           />
         );
+      case 'fund-wallet':
+        return <FundWalletScreen onBack={() => setCurrentScreen('profile')} />;
+
       case 'station-details':
         return (
           <StationDetailsScreen 
@@ -158,7 +167,8 @@ const Index = () => {
           </div>
         );
       case 'profile':
-        return <ProfileScreen />;
+        return <ProfileScreen onNavigate={handleNavigate} />;
+
 
       case 'prohibited-parking':
         return (
