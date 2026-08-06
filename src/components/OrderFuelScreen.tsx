@@ -99,31 +99,54 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
     return setStep('delivery');
   };
 
-  const handlePay = () => {
+  const emitOrder = (paymentStatus: 'pending' | 'paid') => {
     if (!product || !station) return;
+    onPlaceOrder({
+      fuelType: { id: product.id, name: product.product_name, price: pricePerUnit, unit },
+      station: { id: station.id, name: station.name },
+      quantity,
+      unit,
+      address,
+      distanceKm: station.distanceKm,
+      deliveryProvider: {
+        id: deliveryProvider,
+        name: deliveryProvider === 'in-house' ? 'Station Delivery' : 'Third-Party Delivery',
+        isInHouse: deliveryProvider === 'in-house',
+      },
+      deliveryFee,
+      totalAmount: total,
+      paymentMethod,
+      paymentStatus: 'pending',
+      walletPaid: paymentStatus === 'paid',
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  const handlePay = async () => {
+    if (!product || !station) return;
+
+    if (paymentMethod === 'wallet') {
+      if (walletLoading || !wallet) return;
+      if (balance < total) return;
+      setPaymentState('processing');
+      try {
+        await spend(total, `Fuel order — ${product.product_name} (${quantity}${unit}) @ ${station.name}`);
+        setPaymentState('paid');
+        emitOrder('paid');
+      } catch (e: any) {
+        setPaymentState('idle');
+        setWalletError(e.message || 'Wallet payment failed');
+      }
+      return;
+    }
+
     setPaymentState('processing');
     setTimeout(() => {
       setPaymentState('pending');
-      onPlaceOrder({
-        fuelType: { id: product.id, name: product.product_name, price: pricePerUnit, unit },
-        station: { id: station.id, name: station.name },
-        quantity,
-        unit,
-        address,
-        distanceKm: station.distanceKm,
-        deliveryProvider: {
-          id: deliveryProvider,
-          name: deliveryProvider === 'in-house' ? 'Station Delivery' : 'Third-Party Delivery',
-          isInHouse: deliveryProvider === 'in-house',
-        },
-        deliveryFee,
-        totalAmount: total,
-        paymentMethod,
-        paymentStatus: 'pending',
-        timestamp: new Date().toISOString(),
-      });
+      emitOrder('pending');
     }, 1200);
   };
+
 
   return (
     <div className="p-4 space-y-6">
