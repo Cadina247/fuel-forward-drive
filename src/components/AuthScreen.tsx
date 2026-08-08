@@ -299,20 +299,14 @@ const AuthScreen: React.FC = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    autoCorrect="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
+                <PasswordToggle
+                  id="login-password"
+                  name="password"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  showPassword={showLoginPassword}
+                  setShowPassword={setShowLoginPassword}
+                />
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Please wait…' : 'Login'}
                 </Button>
