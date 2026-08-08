@@ -173,6 +173,24 @@ const AuthScreen: React.FC = () => {
     }
   }
 
+  const onGoogleAuth = async () => {
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+        },
+      })
+      if (error) throw error
+      // Browser redirects to Google; nothing else to do here.
+    } catch (err) {
+      fail('Google sign-in failed', err)
+      setLoading(false)
+    }
+  }
+
   // NOTE: these are plain render functions (not nested components) so React does
   // not unmount/remount the inputs on every keystroke — that was causing the
   // keyboard to close and focus to be lost mid-typing on mobile.
