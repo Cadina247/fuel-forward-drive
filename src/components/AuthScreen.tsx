@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabaseClient'
+import CadinatechLogo from '@/components/brand/CadinatechLogo'
 import { Fuel, Mail, Phone, Eye, EyeOff } from 'lucide-react'
 
 type Method = 'email' | 'phone'
@@ -266,10 +267,8 @@ const AuthScreen: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-background flex flex-col justify-center p-4 max-w-md mx-auto">
       <div className="flex flex-col items-center mb-6">
-        <div className="w-14 h-14 bg-gradient-primary rounded-2xl flex items-center justify-center mb-3">
-          <Fuel className="h-7 w-7 text-white" />
-        </div>
-        <h1 className="text-2xl font-bold text-foreground">Welcome to FuelNow</h1>
+        <CadinatechLogo size={72} orientation="vertical" className="mb-3" />
+        <h1 className="text-2xl font-bold text-foreground">Welcome to Cadinatech</h1>
         <p className="text-muted-foreground text-sm">Fuel delivery, on your terms</p>
       </div>
 

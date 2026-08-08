@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import CadinatechLogo from '@/components/brand/CadinatechLogo';
 import { 
   Home, 
   Search, 
@@ -30,10 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab = 'home', onTabChan
       <header className="bg-white/80 backdrop-blur-md border-b border-border/50 sticky top-0 z-50">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">F</span>
-            </div>
-            <span className="font-bold text-lg text-foreground">FuelNow</span>
+            <CadinatechLogo size={34} />
           </div>
           <Button variant="ghost" size="icon">
             <Menu className="h-5 w-5" />
