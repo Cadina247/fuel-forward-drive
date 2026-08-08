@@ -6,9 +6,56 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabaseClient'
-import { Fuel, Mail, Phone } from 'lucide-react'
+import { Fuel, Mail, Phone, Eye, EyeOff } from 'lucide-react'
 
 type Method = 'email' | 'phone'
+
+type PasswordToggleProps = {
+  id: string
+  name: string
+  autoComplete: string
+  placeholder: string
+  showPassword: boolean
+  setShowPassword: (show: boolean) => void
+}
+
+const PasswordToggle: React.FC<PasswordToggleProps> = ({
+  id,
+  name,
+  autoComplete,
+  placeholder,
+  showPassword,
+  setShowPassword,
+}) => (
+  <div className="space-y-2">
+    <Label htmlFor={id}>Password</Label>
+    <div className="relative">
+      <Input
+        id={id}
+        name={name}
+        type={showPassword ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        autoCorrect="off"
+        autoCapitalize="none"
+        spellCheck={false}
+        placeholder={placeholder}
+        required
+        className="pr-10"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={showPassword ? 'Hide password' : 'Show password'}
+        aria-pressed={showPassword}
+        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground"
+        onClick={() => setShowPassword(!showPassword)}
+      >
+        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </Button>
+    </div>
+  </div>
+)
 
 const AuthScreen: React.FC = () => {
   const { toast } = useToast()
@@ -19,6 +66,9 @@ const AuthScreen: React.FC = () => {
   const [otpName, setOtpName] = useState('')
   const [otpEmail, setOtpEmail] = useState('')
   const [otpCode, setOtpCode] = useState('')
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showSignupPassword, setShowSignupPassword] = useState(false)
+
 
   const fail = (title: string, err: any) =>
     toast({ title, description: err?.message || 'Please try again', variant: 'destructive' })
@@ -249,20 +299,14 @@ const AuthScreen: React.FC = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    autoCorrect="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
+                <PasswordToggle
+                  id="login-password"
+                  name="password"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  showPassword={showLoginPassword}
+                  setShowPassword={setShowLoginPassword}
+                />
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Please wait…' : 'Login'}
                 </Button>
@@ -309,20 +353,14 @@ const AuthScreen: React.FC = () => {
                     placeholder="+2348012345678"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    autoCorrect="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    placeholder="Create a strong password"
-                    required
-                  />
-                </div>
+                <PasswordToggle
+                  id="signup-password"
+                  name="password"
+                  autoComplete="new-password"
+                  placeholder="Create a strong password"
+                  showPassword={showSignupPassword}
+                  setShowPassword={setShowSignupPassword}
+                />
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Creating…' : 'Create Account'}
                 </Button>
