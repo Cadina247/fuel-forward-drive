@@ -303,7 +303,27 @@ const AuthScreen: React.FC = () => {
       </div>
 
       <Card className="p-4">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full mb-4"
+          disabled={loading}
+          onClick={onGoogleAuth}
+        >
+          <GoogleIcon className="h-4 w-4 mr-2" /> Continue with Google
+        </Button>
+
+        <div className="relative mb-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-card px-2 text-xs text-muted-foreground">or continue with</span>
+          </div>
+        </div>
+
         <Tabs defaultValue="login" className="w-full">
+
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="signup">Create Account</TabsTrigger>
