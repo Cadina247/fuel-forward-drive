@@ -6,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import VendorsNearby from '@/components/VendorsNearby';
+
 import { useFuelProducts } from '@/hooks/useFuelProducts';
 import { useNearbyStations, NearbyStation } from '@/hooks/useNearbyStations';
 import { useWallet } from '@/hooks/useWallet';
@@ -169,9 +172,16 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
 
       {/* STEP 1 + 2 */}
       {step === 'browse' && (
-        <>
+        <Tabs defaultValue="stations" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="stations">Filling Stations</TabsTrigger>
+            <TabsTrigger value="vendors">Vendors</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="stations" className="space-y-6">
           {/* National Fuel Price — reference only */}
           <div className="space-y-3">
+
             <div>
               <h2 className="text-lg font-semibold">National Fuel Price</h2>
               <p className="text-xs text-muted-foreground">Reference prices only — pick a station below to order.</p>
@@ -244,8 +254,14 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
               </div>
             )}
           </div>
-        </>
+          </TabsContent>
+
+          <TabsContent value="vendors">
+            <VendorsNearby />
+          </TabsContent>
+        </Tabs>
       )}
+
 
       {/* STEP 3 + 4 */}
       {step === 'products' && station && (
