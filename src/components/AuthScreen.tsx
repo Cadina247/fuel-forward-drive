@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabaseClient'
+import CadinatechLogo from '@/components/brand/CadinatechLogo'
 import { Fuel, Mail, Phone, Eye, EyeOff } from 'lucide-react'
 
 type Method = 'email' | 'phone'
