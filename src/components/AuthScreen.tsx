@@ -353,20 +353,14 @@ const AuthScreen: React.FC = () => {
                     placeholder="+2348012345678"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    autoCorrect="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    placeholder="Create a strong password"
-                    required
-                  />
-                </div>
+                <PasswordToggle
+                  id="signup-password"
+                  name="password"
+                  autoComplete="new-password"
+                  placeholder="Create a strong password"
+                  showPassword={showSignupPassword}
+                  setShowPassword={setShowSignupPassword}
+                />
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Creating…' : 'Create Account'}
                 </Button>
