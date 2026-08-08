@@ -251,8 +251,14 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
               </div>
             )}
           </div>
-        </>
+          </TabsContent>
+
+          <TabsContent value="vendors">
+            <VendorsNearby />
+          </TabsContent>
+        </Tabs>
       )}
+
 
       {/* STEP 3 + 4 */}
       {step === 'products' && station && (
