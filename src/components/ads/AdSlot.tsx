@@ -42,6 +42,8 @@ const AdSenseAd: React.FC = () => {
 };
 
 /** AdMob banner for native (Capacitor) builds. Renders via @capacitor-community/admob if installed. */
+const ADMOB_MODULE = '@capacitor-community/admob';
+
 const AdMobAd: React.FC = () => {
   const [failed, setFailed] = useState(false);
 
@@ -50,7 +52,7 @@ const AdMobAd: React.FC = () => {
     (async () => {
       try {
         // Dynamic import so web builds never require the native plugin.
-        const mod: any = await import(/* @vite-ignore */ '@capacitor-community/admob');
+        const mod: any = await import(/* @vite-ignore */ ADMOB_MODULE);
         if (cancelled) return;
         await mod.AdMob.initialize({ initializeForTesting: adsConfig.admob.testMode });
         await mod.AdMob.showBanner({
@@ -65,7 +67,7 @@ const AdMobAd: React.FC = () => {
     })();
     return () => {
       cancelled = true;
-      import(/* @vite-ignore */ '@capacitor-community/admob')
+      import(/* @vite-ignore */ ADMOB_MODULE)
         .then((mod: any) => mod.AdMob.removeBanner?.())
         .catch(() => undefined);
     };
