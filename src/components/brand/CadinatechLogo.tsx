@@ -134,7 +134,7 @@ const CadinatechLogo: React.FC<CadinatechLogoProps> = ({
         style={{
           letterSpacing: '0.18em',
           fontSize: Math.max(12, Math.round(size * 0.42)),
-          background: 'linear-gradient(135deg, #F5D061 0%, #D4AF37 100%)',
+          background: 'linear-gradient(135deg, #D4AF37 0%, #A87F17 100%)',
           WebkitBackgroundClip: 'text',
           backgroundClip: 'text',
           color: 'transparent',
