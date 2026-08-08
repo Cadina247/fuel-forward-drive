@@ -18,7 +18,7 @@ import {
   Navigation,
   Car
 } from 'lucide-react';
-import AdSenseBanner from '@/components/ads/AdSenseBanner';
+import AdSlot from '@/components/ads/AdSlot';
 
 interface HomeScreenProps {
   onNavigate: (screen: string) => void;
@@ -64,8 +64,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, userName }) => {
         </div>
       </Card>
 
-      {/* Google AdSense - replace client/slot with your IDs in index.html */}
-      <AdSenseBanner />
+      {/* Ad slot — configure networks in src/config/ads.ts */}
+      <AdSlot onNavigate={onNavigate} />
 
       {/* Quick Actions */}
       <div className="space-y-3">
