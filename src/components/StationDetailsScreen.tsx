@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useFuelProducts } from '@/hooks/useFuelProducts';
+import { useNearbyStations } from '@/hooks/useNearbyStations';
+import { useStationServices } from '@/hooks/useStationServices';
 import { 
   ArrowLeft, 
   MapPin, 
