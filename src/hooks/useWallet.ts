@@ -28,13 +28,14 @@ export function useWallet() {
   const [error, setError] = useState<string | null>(null)
 
   const loadTransactions = useCallback(async (walletId: string) => {
+    // Ledger table is optional on the shared portal backend.
     const { data } = await supabase
-      .from('wallet_transactions')
+      .from('wallet_transactions' as never)
       .select('*')
       .eq('wallet_id', walletId)
       .order('created_at', { ascending: false })
       .limit(50)
-    setTransactions((data as WalletTransaction[]) ?? [])
+    setTransactions((data as WalletTransaction[] | null) ?? [])
   }, [])
 
   const load = useCallback(async () => {
@@ -47,24 +48,25 @@ export function useWallet() {
     setLoading(true)
     setError(null)
 
-    const { data, error: selErr } = await supabase
-      .from('wallets')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (selErr) {
-      setError(selErr.message)
-      setLoading(false)
-      return
+    // The portal backend scopes wallets by `owner_id`; older schemas used `user_id`.
+    let row: Wallet | null = null
+    for (const column of ['owner_id', 'user_id']) {
+      const { data, error: selErr } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq(column, user.id)
+        .maybeSingle()
+      if (!selErr) {
+        row = (data as Wallet | null) ?? null
+        if (row) break
+      }
     }
 
-    let row = data as Wallet | null
     if (!row) {
       // Fallback if the profile trigger hasn't run for this user yet.
       const { data: created, error: insErr } = await supabase
         .from('wallets')
-        .insert({ user_id: user.id })
+        .insert({ owner_id: user.id })
         .select('*')
         .maybeSingle()
       if (insErr) {
@@ -89,7 +91,7 @@ export function useWallet() {
     async (amount: number, description: string) => {
       if (!wallet) throw new Error('Wallet not ready')
       const { data, error: e } = await supabase
-        .from('wallet_transactions')
+        .from('wallet_transactions' as never)
         .insert({
           wallet_id: wallet.id,
           amount,
@@ -111,7 +113,7 @@ export function useWallet() {
     async (txnId: string, amount: number) => {
       if (!wallet) throw new Error('Wallet not ready')
       const { error: txErr } = await supabase
-        .from('wallet_transactions')
+        .from('wallet_transactions' as never)
         .update({ status: 'completed' })
         .eq('id', txnId)
       if (txErr) throw new Error(txErr.message)
