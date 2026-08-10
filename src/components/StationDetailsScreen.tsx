@@ -115,13 +115,28 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
     { id: 'gas', name: 'Cooking Gas', icon: '🔥', unit: 'kg' }
   ];
 
-  const station = stations[stationId as keyof typeof stations];
+  // Live station record from the shared portal backend (falls back to the demo directory)
+  const { allStations } = useNearbyStations(1000);
+  const remote = allStations.find((s) => s.id === stationId);
+  const demo = stations[stationId as keyof typeof stations];
+  const station = demo ?? {
+    name: remote?.name ?? 'Station',
+    address: remote?.address ?? 'Address unavailable',
+    rating: remote?.rating ?? 0,
+    reviewCount: 0,
+    distance: remote?.distanceKm != null ? `${remote.distanceKm.toFixed(1)} km` : '—',
+    phone: '—',
+    openHours: 'Hours unavailable',
+  };
   const availability = fuelAvailability[stationId as keyof typeof fuelAvailability];
-  const services = stationServices[stationId as keyof typeof stationServices];
+  const services = stationServices[stationId as keyof typeof stationServices] ?? [];
 
   // Live products for this station from the shared backend
   const { allProducts, realtimeStatus } = useFuelProducts({ onlyAvailable: false, stationId });
   const liveMode = allProducts.length > 0;
+
+  // Live non-fuel services / activities offered at this station
+  const { services: liveServices, loading: servicesLoading } = useStationServices(stationId);
 
 
   const getStockColor = (stock: string) => {
