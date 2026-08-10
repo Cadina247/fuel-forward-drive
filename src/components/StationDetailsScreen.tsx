@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useFuelProducts } from '@/hooks/useFuelProducts';
+import { useNearbyStations } from '@/hooks/useNearbyStations';
+import { useStationServices } from '@/hooks/useStationServices';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -115,13 +117,28 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
     { id: 'gas', name: 'Cooking Gas', icon: '🔥', unit: 'kg' }
   ];
 
-  const station = stations[stationId as keyof typeof stations];
+  // Live station record from the shared portal backend (falls back to the demo directory)
+  const { allStations } = useNearbyStations(1000);
+  const remote = allStations.find((s) => s.id === stationId);
+  const demo = stations[stationId as keyof typeof stations];
+  const station = demo ?? {
+    name: remote?.name ?? 'Station',
+    address: remote?.address ?? 'Address unavailable',
+    rating: remote?.rating ?? 0,
+    reviewCount: 0,
+    distance: remote?.distanceKm != null ? `${remote.distanceKm.toFixed(1)} km` : '—',
+    phone: '—',
+    openHours: 'Hours unavailable',
+  };
   const availability = fuelAvailability[stationId as keyof typeof fuelAvailability];
-  const services = stationServices[stationId as keyof typeof stationServices];
+  const services = stationServices[stationId as keyof typeof stationServices] ?? [];
 
   // Live products for this station from the shared backend
   const { allProducts, realtimeStatus } = useFuelProducts({ onlyAvailable: false, stationId });
   const liveMode = allProducts.length > 0;
+
+  // Live non-fuel services / activities offered at this station
+  const { services: liveServices, loading: servicesLoading } = useStationServices(stationId);
 
 
   const getStockColor = (stock: string) => {
@@ -275,10 +292,42 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
       </div>
 
 
-      {/* Other Services */}
+      {/* Services & Activities (live from the shared portal) */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Other Services</h2>
+        <h2 className="text-lg font-semibold">Services & Activities</h2>
+        {servicesLoading ? (
+          <p className="text-sm text-muted-foreground">Loading services…</p>
+        ) : liveServices.length > 0 ? (
+          <div className="space-y-3">
+            {liveServices.map((service) => (
+              <Card key={service.id} className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-medium">{service.name}</h3>
+                    {service.description && (
+                      <p className="text-sm text-muted-foreground">{service.description}</p>
+                    )}
+                    {service.category && (
+                      <Badge variant="outline" className="mt-1">{service.category}</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-green-600 border-green-200">
+                      Available
+                    </Badge>
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No services listed for this station yet.
+          </p>
+        )}
         <div className="space-y-3">
+
           {services.map((service, index) => (
             <Card 
               key={index} 
