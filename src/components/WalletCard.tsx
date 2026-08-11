@@ -88,6 +88,13 @@ const WalletCard: React.FC<Props> = ({ onFundWallet, onViewOrder }) => {
           ))
         )}
       </div>
+
+      <TransactionDetailsDialog
+        transaction={selected}
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+        onViewOrder={onViewOrder}
+      />
     </div>
   )
 }
