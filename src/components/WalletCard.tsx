@@ -49,7 +49,14 @@ const WalletCard: React.FC<Props> = ({ onFundWallet, onViewOrder }) => {
           <Card className="p-4 text-sm text-muted-foreground">No transactions yet.</Card>
         ) : (
           transactions.map((t) => (
-            <Card key={t.id} className="p-3 flex items-center justify-between">
+            <Card
+              key={t.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelected(t)}
+              onKeyDown={(e) => e.key === 'Enter' && setSelected(t)}
+              className="p-3 flex items-center justify-between cursor-pointer transition-colors hover:bg-muted/50"
+            >
               <div className="flex items-center gap-3">
                 <div
                   className={`w-8 h-8 rounded-lg flex items-center justify-center ${
