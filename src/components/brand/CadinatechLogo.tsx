@@ -1,5 +1,5 @@
 import React from 'react';
-import logoAsset from '@/assets/cadinatech-logo.png.asset.json';
+import logoArtwork from '@/assets/cadinatech-logo.png';
 
 interface CadinatechLogoProps {
   /** Badge diameter in px */
