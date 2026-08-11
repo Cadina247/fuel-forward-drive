@@ -18,6 +18,8 @@ export interface WalletTransaction {
   description: string | null
   status: 'pending' | 'completed' | 'failed'
   created_at: string
+  /** Extra columns vary by backend schema (e.g. order_id, reference_id). */
+  [key: string]: unknown
 }
 
 export function useWallet() {
