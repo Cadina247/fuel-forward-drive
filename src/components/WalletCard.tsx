@@ -1,19 +1,22 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useWallet } from '@/hooks/useWallet'
+import { useWallet, type WalletTransaction } from '@/hooks/useWallet'
+import TransactionDetailsDialog from '@/components/TransactionDetailsDialog'
 import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, Plus } from 'lucide-react'
 
 interface Props {
   onFundWallet?: () => void
+  onViewOrder?: (orderId: string) => void
 }
 
 const statusVariant = (s: string) =>
   s === 'completed' ? 'text-green-600' : s === 'failed' ? 'text-destructive' : 'text-muted-foreground'
 
-const WalletCard: React.FC<Props> = ({ onFundWallet }) => {
+const WalletCard: React.FC<Props> = ({ onFundWallet, onViewOrder }) => {
   const { balance, transactions, loading, error } = useWallet()
+  const [selected, setSelected] = useState<WalletTransaction | null>(null)
 
   return (
     <div className="space-y-4">
