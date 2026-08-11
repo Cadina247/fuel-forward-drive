@@ -27,7 +27,7 @@ export const CadinatechMark: React.FC<{ size?: number; className?: string }> = (
       width: size,
       height: size,
       backgroundColor: '#0A0E1A',
-      backgroundImage: `url(${logoAsset.url})`,
+      backgroundImage: `url(${logoArtwork})`,
       // Frames the medallion (excludes the wordmark) from the square artwork.
       backgroundSize: '170% 182%',
       backgroundPosition: '49% 26%',
