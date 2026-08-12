@@ -35,32 +35,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true)
 
   const loadProfile = useCallback(async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, phone')
-      .eq('id', userId)
-      .maybeSingle()
-    if (error) return
-    if (data) {
-      setProfile(data as Profile)
-      return
-    }
-    // Fallback: create the profile row from auth metadata on first login.
+    // Always derive a usable profile from the auth user first, so login never
+    // depends on the optional `profiles` table existing in the backend.
     const { data: userRes } = await supabase.auth.getUser()
     const u = userRes?.user
-    if (!u) return
-    const row = {
-      id: u.id,
-      full_name: (u.user_metadata?.full_name as string) ?? null,
-      email: u.email ?? (u.user_metadata?.email as string) ?? null,
-      phone: u.phone ?? (u.user_metadata?.phone as string) ?? null,
+    const fallback: Profile | null = u
+      ? {
+          id: u.id,
+          full_name:
+            ((u.user_metadata?.full_name ?? u.user_metadata?.name) as string) ?? null,
+          email: u.email ?? ((u.user_metadata?.email as string) ?? null),
+          phone: u.phone ?? ((u.user_metadata?.phone as string) ?? null),
+        }
+      : null
+    if (fallback) setProfile(fallback)
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone')
+        .eq('id', userId)
+        .maybeSingle()
+      if (error) return // table missing / not accessible — keep the fallback
+      if (data) {
+        setProfile(data as Profile)
+      } else if (fallback) {
+        const { data: inserted } = await supabase
+          .from('profiles')
+          .upsert(fallback, { onConflict: 'id' })
+          .select('id, full_name, email, phone')
+          .maybeSingle()
+        if (inserted) setProfile(inserted as Profile)
+      }
+    } catch {
+      // ignore — fallback profile already set
     }
-    const { data: inserted } = await supabase
-      .from('profiles')
-      .upsert(row, { onConflict: 'id' })
-      .select('id, full_name, email, phone')
-      .maybeSingle()
-    setProfile((inserted as Profile) ?? (row as Profile))
   }, [])
 
 
