@@ -90,22 +90,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, userName }) => {
           <Button 
             variant="quick" 
             className="h-24 flex-col"
-            onClick={() => onNavigate('service-nearby')}
-          >
-            <Car className="h-6 w-6 mb-2" />
-            <span>Nearby Resources</span>
-          </Button>
-          <Button 
-            variant="quick" 
-            className="h-24 flex-col"
-            onClick={() => onNavigate('road-signs')}
-          >
-            <Navigation className="h-6 w-6 mb-2" />
-            <span>Road Signs</span>
-          </Button>
-          <Button 
-            variant="quick" 
-            className="h-24 flex-col"
             onClick={() => onNavigate('token-generator')}
           >
             <QrCode className="h-6 w-6 mb-2" />
