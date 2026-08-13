@@ -8,9 +8,7 @@ import TokenGeneratorScreen from '@/components/TokenGeneratorScreen';
 import EVChargingScreen from '@/components/EVChargingScreen';
 import SoftLoanScreen from '@/components/SoftLoanScreen';
 import TrackOrderScreen from '@/components/TrackOrderScreen';
-import RoadSignsScreen from '@/components/RoadSignsScreen';
 import CookingGasScreen from '@/components/CookingGasScreen';
-import ServiceNearbyScreen from '@/components/ServiceNearbyScreen';
 import DeliveryProviderRegistrationScreen from '@/components/DeliveryProviderRegistrationScreen';
 import StationIncomingOrdersScreen from '@/components/StationIncomingOrdersScreen';
 import OrderAwaitingScreen from '@/components/OrderAwaitingScreen';
@@ -128,10 +126,6 @@ const Index = () => {
         return <SoftLoanScreen onBack={() => setCurrentScreen('home')} />;
       case 'track-order':
         return <TrackOrderScreen onBack={() => setCurrentScreen('home')} />;
-      case 'road-signs':
-        return <RoadSignsScreen onBack={() => setCurrentScreen('home')} />;
-      case 'service-nearby':
-        return <ServiceNearbyScreen onBack={() => setCurrentScreen('home')} />;
       case 'delivery-provider-registration':
         return <DeliveryProviderRegistrationScreen onBack={() => setCurrentScreen('home')} />;
       case 'station-incoming':
