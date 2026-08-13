@@ -329,11 +329,8 @@ const StationDetailsScreen: React.FC<StationDetailsScreenProps> = ({ onBack, sta
         <div className="space-y-3">
 
           {services.map((service, index) => (
-            <Card 
-              key={index} 
-              className={`p-4 ${service.name === 'Road Signs Guide' ? 'cursor-pointer hover:bg-accent' : ''}`}
-              onClick={() => service.name === 'Road Signs Guide' && onNavigate ? onNavigate('road-signs') : undefined}
-            >
+            <Card key={index} className="p-4">
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="text-2xl">{service.icon}</div>
