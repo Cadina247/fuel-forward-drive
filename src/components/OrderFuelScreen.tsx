@@ -447,8 +447,102 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
             </Card>
           </div>
 
+          {/* Service level — distance-based pricing, not a flat surcharge */}
           <div className="space-y-3">
-            <h2 className="text-lg font-semibold">Delivery Provider</h2>
+            <h2 className="text-lg font-semibold">Delivery Speed</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { id: 'standard' as ServiceLevel, title: 'Standard', desc: 'Local provider • normal queue', icon: <Clock className="h-4 w-4" /> },
+                { id: 'fast' as ServiceLevel, title: 'Fast Track', desc: 'Priority allocation • faster pickup', icon: <Zap className="h-4 w-4" /> },
+              ]).map((opt) => (
+                <Card
+                  key={opt.id}
+                  className={`p-3 cursor-pointer border-2 transition-all ${
+                    serviceLevel === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => setServiceLevel(opt.id)}
+                >
+                  <div className="flex items-center gap-2 font-medium text-sm">
+                    {opt.icon} {opt.title}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-lg font-semibold">Delivery Provider</h2>
+              <p className="text-xs text-muted-foreground">
+                Ranked by how close they already are to you, pickup time, workload and reliability.
+              </p>
+            </div>
+
+            {reassignedFrom && (
+              <Card className="p-3 border-primary/40 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-primary mt-0.5" />
+                <p className="text-xs">
+                  Your first choice became unavailable — we reassigned you to the next best provider.
+                </p>
+              </Card>
+            )}
+
+            {providersLoading && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" /> Finding providers near you…
+              </p>
+            )}
+
+            {!providersLoading && rankedProviders.length === 0 && (
+              <Card className="p-4 text-sm text-muted-foreground">
+                No {serviceLevel === 'fast' ? 'Fast Track ' : ''}partner is active in your area right now — Station
+                Delivery below can still handle this order.
+              </Card>
+            )}
+
+            {rankedProviders.map((p, i) => {
+              const active = deliveryProvider === 'partner' && providerId === p.id;
+              return (
+                <Card
+                  key={p.id}
+                  className={`p-4 cursor-pointer border-2 transition-all ${
+                    active ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => {
+                    setDeliveryProvider('partner');
+                    setProviderId(p.id);
+                    setReassignedFrom(null);
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Bike className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-sm">
+                          {p.name} {i === 0 && <Badge variant="secondary" className="ml-1">Best match</Badge>}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {p.distanceKm.toFixed(1)} km away • {p.pickupMinutes} min pickup
+                          {p.serviceArea ? ` • ${p.serviceArea}` : ''}
+                        </p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                          {p.rating.toFixed(1)} • {p.activeJobs} active job{p.activeJobs === 1 ? '' : 's'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-primary">₦{p.fee.toLocaleString()}</p>
+                      <p className="text-[11px] text-muted-foreground">{p.logisticsKm.toFixed(1)} km route</p>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+
             <Card
               className={`p-4 cursor-pointer border-2 transition-all ${
                 deliveryProvider === 'in-house' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
@@ -463,28 +557,25 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
                 <Badge variant="secondary" className="bg-green-100 text-green-800">Available</Badge>
               </div>
             </Card>
-            <Card className="p-4 border-2 border-dashed border-border opacity-60 cursor-not-allowed">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">🚗 Third-Party Delivery</h3>
-                  <p className="text-xs text-muted-foreground">Bolt, Uber and partners</p>
-                </div>
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Coming soon
-                </Badge>
-              </div>
-            </Card>
           </div>
+
+          <Card className="p-3 bg-muted/30">
+            <p className="text-[11px] text-muted-foreground">
+              Fuel is dispensed at the station into an approved container. Please confirm the container type you use
+              meets Nigerian regulations for the product being delivered.
+            </p>
+          </Card>
 
           <Button
             variant="fuel"
             size="xl"
             className="w-full"
-            disabled={!address.trim()}
+            disabled={!address.trim() || (deliveryProvider === 'partner' && !selectedProvider)}
             onClick={() => setStep('checkout')}
           >
             Continue to Checkout
           </Button>
+
         </>
       )}
 
