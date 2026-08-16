@@ -72,15 +72,25 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(20);
   const [address, setAddress] = useState('15 Admiralty Way, Lekki Phase 1, Lagos');
-  const [deliveryProvider, setDeliveryProvider] = useState<'in-house' | 'third-party'>('in-house');
+  const [deliveryProvider, setDeliveryProvider] = useState<'in-house' | 'partner'>('partner');
+  const [serviceLevel, setServiceLevel] = useState<ServiceLevel>('standard');
+  const [providerId, setProviderId] = useState<string | null>(null);
+  const [reassignedFrom, setReassignedFrom] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card'>('wallet');
   const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'pending' | 'paid'>('idle');
   const [walletError, setWalletError] = useState<string | null>(null);
 
   const { wallet, balance, loading: walletLoading, spend } = useWallet();
 
-  const { stations, locating } = useNearbyStations(radiusKm);
+  const { stations, locating, coords } = useNearbyStations(radiusKm);
 
+  // Hyperlocal partners already operating around the customer, ranked by
+  // proximity, workload, reliability and price for the chosen service level.
+  const { providers: rankedProviders, loading: providersLoading } = useHyperlocalProviders({
+    customer: coords,
+    station: station ? { lat: station.lat, lng: station.lng } : null,
+    serviceLevel,
+  });
 
   // Station-scoped live products from the shared backend.
   const { allProducts, loading: productsLoading, error: productsError, realtimeStatus, lastEventAt } =
@@ -99,10 +109,31 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
     if (productUnavailable && step !== 'products') setStep('products');
   }, [productUnavailable, step]);
 
+  const selectedProvider: RankedProvider | null =
+    rankedProviders.find((p) => p.id === providerId) ?? null;
+
+  // Ranking engine → customer preference → automatic fallback.
+  useEffect(() => {
+    if (providersLoading || rankedProviders.length === 0) return;
+    if (!providerId) {
+      setProviderId(rankedProviders[0].id);
+      return;
+    }
+    if (!rankedProviders.some((p) => p.id === providerId)) {
+      setReassignedFrom(providerId);
+      setProviderId(rankedProviders[0].id);
+    }
+  }, [rankedProviders, providerId, providersLoading]);
+
   const unit = unitForProduct(product?.product_name, product?.unit);
   const pricePerUnit = Number(product?.price ?? 0);
   const subtotal = pricePerUnit * quantity;
-  const deliveryFee = deliveryProvider === 'in-house' ? (subtotal > 20000 ? 0 : 500) : 0;
+  const deliveryFee =
+    deliveryProvider === 'in-house'
+      ? subtotal > 20000
+        ? 0
+        : 500
+      : selectedProvider?.fee ?? 0;
   const total = subtotal + deliveryFee;
 
   const goBack = () => {
@@ -121,11 +152,19 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
       unit,
       address,
       distanceKm: station.distanceKm,
-      deliveryProvider: {
-        id: deliveryProvider,
-        name: deliveryProvider === 'in-house' ? 'Station Delivery' : 'Third-Party Delivery',
-        isInHouse: deliveryProvider === 'in-house',
-      },
+      serviceLevel,
+      deliveryProvider:
+        deliveryProvider === 'in-house' || !selectedProvider
+          ? { id: 'in-house', name: 'Station Delivery', isInHouse: true }
+          : {
+              id: selectedProvider.id,
+              name: selectedProvider.name,
+              isInHouse: false,
+              phone: selectedProvider.phone,
+              pickupMinutes: selectedProvider.pickupMinutes,
+              distanceKm: selectedProvider.distanceKm,
+              logisticsKm: selectedProvider.logisticsKm,
+            },
       deliveryFee,
       totalAmount: total,
       paymentMethod,
@@ -134,6 +173,7 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
       timestamp: new Date().toISOString(),
     });
   };
+
 
   const handlePay = async () => {
     if (!product || !station) return;
