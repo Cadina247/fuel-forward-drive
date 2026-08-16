@@ -598,11 +598,25 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
                 <span className="font-medium text-right max-w-[60%]">{address}</span>
               </div>
               <div className="flex justify-between">
+                <span>Provider</span>
+                <span className="font-medium text-right">
+                  {deliveryProvider === 'in-house' ? 'Station Delivery' : selectedProvider?.name}
+                  {deliveryProvider === 'partner' && selectedProvider
+                    ? ` • ${selectedProvider.pickupMinutes} min pickup`
+                    : ''}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Service level</span>
+                <span className="font-medium">{serviceLevel === 'fast' ? 'Fast Track' : 'Standard'}</span>
+              </div>
+              <div className="flex justify-between">
                 <span>Delivery Fee</span>
                 <span className={deliveryFee === 0 ? 'text-green-600' : ''}>
                   {deliveryFee === 0 ? 'Free' : `₦${deliveryFee.toLocaleString()}`}
                 </span>
               </div>
+
               <Separator />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
