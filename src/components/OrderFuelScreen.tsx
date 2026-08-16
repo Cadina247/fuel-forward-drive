@@ -11,6 +11,7 @@ import VendorsNearby from '@/components/VendorsNearby';
 
 import { useFuelProducts } from '@/hooks/useFuelProducts';
 import { useNearbyStations, NearbyStation } from '@/hooks/useNearbyStations';
+import { useHyperlocalProviders, ServiceLevel, RankedProvider } from '@/hooks/useHyperlocalProviders';
 import { useWallet } from '@/hooks/useWallet';
 import {
 
@@ -28,7 +29,10 @@ import {
   Navigation,
   CheckCircle2,
   Clock,
+  Zap,
+  Bike,
 } from 'lucide-react';
+
 
 interface OrderFuelScreenProps {
   onBack: () => void;
@@ -68,15 +72,25 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(20);
   const [address, setAddress] = useState('15 Admiralty Way, Lekki Phase 1, Lagos');
-  const [deliveryProvider, setDeliveryProvider] = useState<'in-house' | 'third-party'>('in-house');
+  const [deliveryProvider, setDeliveryProvider] = useState<'in-house' | 'partner'>('partner');
+  const [serviceLevel, setServiceLevel] = useState<ServiceLevel>('standard');
+  const [providerId, setProviderId] = useState<string | null>(null);
+  const [reassignedFrom, setReassignedFrom] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card'>('wallet');
   const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'pending' | 'paid'>('idle');
   const [walletError, setWalletError] = useState<string | null>(null);
 
   const { wallet, balance, loading: walletLoading, spend } = useWallet();
 
-  const { stations, locating } = useNearbyStations(radiusKm);
+  const { stations, locating, coords } = useNearbyStations(radiusKm);
 
+  // Hyperlocal partners already operating around the customer, ranked by
+  // proximity, workload, reliability and price for the chosen service level.
+  const { providers: rankedProviders, loading: providersLoading } = useHyperlocalProviders({
+    customer: coords,
+    station: station ? { lat: station.lat, lng: station.lng } : null,
+    serviceLevel,
+  });
 
   // Station-scoped live products from the shared backend.
   const { allProducts, loading: productsLoading, error: productsError, realtimeStatus, lastEventAt } =
@@ -95,10 +109,31 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
     if (productUnavailable && step !== 'products') setStep('products');
   }, [productUnavailable, step]);
 
+  const selectedProvider: RankedProvider | null =
+    rankedProviders.find((p) => p.id === providerId) ?? null;
+
+  // Ranking engine → customer preference → automatic fallback.
+  useEffect(() => {
+    if (providersLoading || rankedProviders.length === 0) return;
+    if (!providerId) {
+      setProviderId(rankedProviders[0].id);
+      return;
+    }
+    if (!rankedProviders.some((p) => p.id === providerId)) {
+      setReassignedFrom(providerId);
+      setProviderId(rankedProviders[0].id);
+    }
+  }, [rankedProviders, providerId, providersLoading]);
+
   const unit = unitForProduct(product?.product_name, product?.unit);
   const pricePerUnit = Number(product?.price ?? 0);
   const subtotal = pricePerUnit * quantity;
-  const deliveryFee = deliveryProvider === 'in-house' ? (subtotal > 20000 ? 0 : 500) : 0;
+  const deliveryFee =
+    deliveryProvider === 'in-house'
+      ? subtotal > 20000
+        ? 0
+        : 500
+      : selectedProvider?.fee ?? 0;
   const total = subtotal + deliveryFee;
 
   const goBack = () => {
@@ -117,11 +152,19 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
       unit,
       address,
       distanceKm: station.distanceKm,
-      deliveryProvider: {
-        id: deliveryProvider,
-        name: deliveryProvider === 'in-house' ? 'Station Delivery' : 'Third-Party Delivery',
-        isInHouse: deliveryProvider === 'in-house',
-      },
+      serviceLevel,
+      deliveryProvider:
+        deliveryProvider === 'in-house' || !selectedProvider
+          ? { id: 'in-house', name: 'Station Delivery', isInHouse: true }
+          : {
+              id: selectedProvider.id,
+              name: selectedProvider.name,
+              isInHouse: false,
+              phone: selectedProvider.phone,
+              pickupMinutes: selectedProvider.pickupMinutes,
+              distanceKm: selectedProvider.distanceKm,
+              logisticsKm: selectedProvider.logisticsKm,
+            },
       deliveryFee,
       totalAmount: total,
       paymentMethod,
@@ -130,6 +173,7 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
       timestamp: new Date().toISOString(),
     });
   };
+
 
   const handlePay = async () => {
     if (!product || !station) return;
@@ -403,8 +447,102 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
             </Card>
           </div>
 
+          {/* Service level — distance-based pricing, not a flat surcharge */}
           <div className="space-y-3">
-            <h2 className="text-lg font-semibold">Delivery Provider</h2>
+            <h2 className="text-lg font-semibold">Delivery Speed</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { id: 'standard' as ServiceLevel, title: 'Standard', desc: 'Local provider • normal queue', icon: <Clock className="h-4 w-4" /> },
+                { id: 'fast' as ServiceLevel, title: 'Fast Track', desc: 'Priority allocation • faster pickup', icon: <Zap className="h-4 w-4" /> },
+              ]).map((opt) => (
+                <Card
+                  key={opt.id}
+                  className={`p-3 cursor-pointer border-2 transition-all ${
+                    serviceLevel === opt.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => setServiceLevel(opt.id)}
+                >
+                  <div className="flex items-center gap-2 font-medium text-sm">
+                    {opt.icon} {opt.title}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-lg font-semibold">Delivery Provider</h2>
+              <p className="text-xs text-muted-foreground">
+                Ranked by how close they already are to you, pickup time, workload and reliability.
+              </p>
+            </div>
+
+            {reassignedFrom && (
+              <Card className="p-3 border-primary/40 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-primary mt-0.5" />
+                <p className="text-xs">
+                  Your first choice became unavailable — we reassigned you to the next best provider.
+                </p>
+              </Card>
+            )}
+
+            {providersLoading && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" /> Finding providers near you…
+              </p>
+            )}
+
+            {!providersLoading && rankedProviders.length === 0 && (
+              <Card className="p-4 text-sm text-muted-foreground">
+                No {serviceLevel === 'fast' ? 'Fast Track ' : ''}partner is active in your area right now — Station
+                Delivery below can still handle this order.
+              </Card>
+            )}
+
+            {rankedProviders.map((p, i) => {
+              const active = deliveryProvider === 'partner' && providerId === p.id;
+              return (
+                <Card
+                  key={p.id}
+                  className={`p-4 cursor-pointer border-2 transition-all ${
+                    active ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => {
+                    setDeliveryProvider('partner');
+                    setProviderId(p.id);
+                    setReassignedFrom(null);
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Bike className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-sm">
+                          {p.name} {i === 0 && <Badge variant="secondary" className="ml-1">Best match</Badge>}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {p.distanceKm.toFixed(1)} km away • {p.pickupMinutes} min pickup
+                          {p.serviceArea ? ` • ${p.serviceArea}` : ''}
+                        </p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                          {p.rating.toFixed(1)} • {p.activeJobs} active job{p.activeJobs === 1 ? '' : 's'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-primary">₦{p.fee.toLocaleString()}</p>
+                      <p className="text-[11px] text-muted-foreground">{p.logisticsKm.toFixed(1)} km route</p>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+
             <Card
               className={`p-4 cursor-pointer border-2 transition-all ${
                 deliveryProvider === 'in-house' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
@@ -419,28 +557,25 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
                 <Badge variant="secondary" className="bg-green-100 text-green-800">Available</Badge>
               </div>
             </Card>
-            <Card className="p-4 border-2 border-dashed border-border opacity-60 cursor-not-allowed">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">🚗 Third-Party Delivery</h3>
-                  <p className="text-xs text-muted-foreground">Bolt, Uber and partners</p>
-                </div>
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Coming soon
-                </Badge>
-              </div>
-            </Card>
           </div>
+
+          <Card className="p-3 bg-muted/30">
+            <p className="text-[11px] text-muted-foreground">
+              Fuel is dispensed at the station into an approved container. Please confirm the container type you use
+              meets Nigerian regulations for the product being delivered.
+            </p>
+          </Card>
 
           <Button
             variant="fuel"
             size="xl"
             className="w-full"
-            disabled={!address.trim()}
+            disabled={!address.trim() || (deliveryProvider === 'partner' && !selectedProvider)}
             onClick={() => setStep('checkout')}
           >
             Continue to Checkout
           </Button>
+
         </>
       )}
 
@@ -463,11 +598,25 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
                 <span className="font-medium text-right max-w-[60%]">{address}</span>
               </div>
               <div className="flex justify-between">
+                <span>Provider</span>
+                <span className="font-medium text-right">
+                  {deliveryProvider === 'in-house' ? 'Station Delivery' : selectedProvider?.name}
+                  {deliveryProvider === 'partner' && selectedProvider
+                    ? ` • ${selectedProvider.pickupMinutes} min pickup`
+                    : ''}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Service level</span>
+                <span className="font-medium">{serviceLevel === 'fast' ? 'Fast Track' : 'Standard'}</span>
+              </div>
+              <div className="flex justify-between">
                 <span>Delivery Fee</span>
                 <span className={deliveryFee === 0 ? 'text-green-600' : ''}>
                   {deliveryFee === 0 ? 'Free' : `₦${deliveryFee.toLocaleString()}`}
                 </span>
               </div>
+
               <Separator />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
