@@ -11,6 +11,7 @@ import VendorsNearby from '@/components/VendorsNearby';
 
 import { useFuelProducts } from '@/hooks/useFuelProducts';
 import { useNearbyStations, NearbyStation } from '@/hooks/useNearbyStations';
+import { useHyperlocalProviders, ServiceLevel, RankedProvider } from '@/hooks/useHyperlocalProviders';
 import { useWallet } from '@/hooks/useWallet';
 import {
 
@@ -28,7 +29,10 @@ import {
   Navigation,
   CheckCircle2,
   Clock,
+  Zap,
+  Bike,
 } from 'lucide-react';
+
 
 interface OrderFuelScreenProps {
   onBack: () => void;
