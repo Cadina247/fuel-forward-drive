@@ -1,116 +1,113 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Zap, 
-  ArrowLeft, 
-  MapPin, 
-  Clock, 
-  Star,
-  Navigation,
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEvPorts, useEvBookings, type EvPort } from '@/hooks/useEvCharging';
+import {
+  Zap,
+  ArrowLeft,
+  MapPin,
   Filter,
   Battery,
-  Plug
+  Plug,
+  Wifi,
+  Loader2,
+  CalendarClock,
 } from 'lucide-react';
 
 interface EVChargingScreenProps {
   onBack: () => void;
 }
 
+const DURATIONS = [30, 60, 90];
+
 const EVChargingScreen: React.FC<EVChargingScreenProps> = ({ onBack }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [busyPortId, setBusyPortId] = useState<string | null>(null);
+  const [duration, setDuration] = useState(60);
+  const { toast } = useToast();
+  const { session, profile } = useAuth();
+  const { stations, ports, loading, realtimeStatus } = useEvPorts();
+  const { bookings, createBooking } = useEvBookings(session?.user?.id ?? null);
 
-  const chargingStations = [
-    {
-      id: 1,
-      name: 'Tesla Supercharger - VI',
-      type: 'DC Fast',
-      power: '150kW',
-      price: 45,
-      distance: '1.2 km',
-      available: 4,
-      total: 8,
-      rating: 4.9,
-      address: 'Plot 1A, Tiamiyu Savage Street, Victoria Island'
-    },
-    {
-      id: 2,
-      name: 'Shell Recharge - Lekki',
-      type: 'AC/DC',
-      power: '50kW',
-      price: 35,
-      distance: '2.8 km',
-      available: 2,
-      total: 6,
-      rating: 4.7,
-      address: 'KM 30, Lekki-Epe Expressway, Lekki Phase 1'
-    },
-    {
-      id: 3,
-      name: 'Total Energy - Ikeja',
-      type: 'AC Standard',
-      power: '22kW',
-      price: 25,
-      distance: '5.1 km',
-      available: 6,
-      total: 10,
-      rating: 4.5,
-      address: '142 Awolowo Way, Ikeja, Lagos'
-    },
-    {
-      id: 4,
-      name: 'EV Power Hub - Ajah',
-      type: 'DC Fast',
-      power: '100kW',
-      price: 40,
-      distance: '3.5 km',
-      available: 0,
-      total: 4,
-      rating: 4.6,
-      address: 'Sangotedo Road, Ajah, Lagos'
+  const bookingByPort = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of bookings) {
+      if (b.port_id && !map.has(String(b.port_id))) map.set(String(b.port_id), b.status ?? 'pending');
     }
-  ];
+    return map;
+  }, [bookings]);
 
   const filters = [
     { id: 'all', label: 'All' },
     { id: 'available', label: 'Available' },
     { id: 'dc-fast', label: 'DC Fast' },
-    { id: 'ac-standard', label: 'AC Standard' }
+    { id: 'ac-standard', label: 'AC Standard' },
   ];
 
-  const filteredStations = chargingStations.filter(station => {
-    if (selectedFilter === 'available') return station.available > 0;
-    if (selectedFilter === 'dc-fast') return station.type.includes('DC');
-    if (selectedFilter === 'ac-standard') return station.type.includes('AC') && !station.type.includes('DC');
+  const matches = (p: EvPort) => {
+    const type = (p.charging_type ?? '').toLowerCase();
+    if (selectedFilter === 'available') return !!p.is_available;
+    if (selectedFilter === 'dc-fast') return type.includes('dc') || type.includes('fast');
+    if (selectedFilter === 'ac-standard') return type.includes('ac') || type.includes('level');
     return true;
-  });
+  };
+
+  const visibleStations = stations
+    .map((s) => ({ ...s, ports: s.ports.filter(matches) }))
+    .filter((s) => s.ports.length > 0);
+
+  const availableCount = ports.filter((p) => p.is_available).length;
+
+  const handleBook = async (port: EvPort) => {
+    setBusyPortId(port.id);
+    const { error } = await createBooking({
+      port,
+      durationMinutes: duration,
+      customerName: profile?.full_name ?? null,
+      customerPhone: (profile as any)?.phone ?? null,
+    });
+    setBusyPortId(null);
+    if (error) {
+      toast({ title: 'Booking failed', description: error, variant: 'destructive' });
+      return;
+    }
+    toast({
+      title: 'Booking sent ⚡',
+      description: `${port.port_code ?? 'Port'} — waiting for the station manager to confirm.`,
+    });
+  };
 
   return (
     <div className="p-4 space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl font-bold">EV Charging Stations</h1>
+        <div>
+          <h1 className="text-xl font-bold">EV Charging</h1>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Wifi className={`h-3 w-3 ${realtimeStatus === 'SUBSCRIBED' ? 'text-green-600' : 'text-muted-foreground'}`} />
+            {realtimeStatus === 'SUBSCRIBED' ? 'Live from station portal' : 'Connecting to live updates…'}
+          </p>
+        </div>
       </div>
 
-      {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4">
         <Card className="p-4 text-center">
           <Zap className="h-8 w-8 text-primary mx-auto mb-2" />
-          <div className="text-2xl font-bold">12</div>
-          <div className="text-sm text-muted-foreground">Available Slots</div>
+          <div className="text-2xl font-bold">{availableCount}</div>
+          <div className="text-sm text-muted-foreground">Ports available now</div>
         </Card>
         <Card className="p-4 text-center">
           <MapPin className="h-8 w-8 text-secondary mx-auto mb-2" />
-          <div className="text-2xl font-bold">4</div>
-          <div className="text-sm text-muted-foreground">Nearby Stations</div>
+          <div className="text-2xl font-bold">{stations.length}</div>
+          <div className="text-sm text-muted-foreground">Charging stations</div>
         </Card>
       </div>
 
-      {/* Filters */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4" />
@@ -120,7 +117,7 @@ const EVChargingScreen: React.FC<EVChargingScreenProps> = ({ onBack }) => {
           {filters.map((filter) => (
             <Button
               key={filter.id}
-              variant={selectedFilter === filter.id ? "default" : "outline"}
+              variant={selectedFilter === filter.id ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedFilter(filter.id)}
               className="whitespace-nowrap"
@@ -131,97 +128,122 @@ const EVChargingScreen: React.FC<EVChargingScreenProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Charging Stations List */}
-      <div className="space-y-4">
-        {filteredStations.map((station) => (
-          <Card key={station.id} className="p-4 hover:shadow-soft transition-all">
-            <div className="space-y-3">
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="font-semibold">{station.name}</h3>
-                  <p className="text-sm text-muted-foreground">{station.address}</p>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1 mb-1">
-                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                    <span className="text-sm font-medium">{station.rating}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    <span>{station.distance}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Details */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Plug className="h-4 w-4 text-primary" />
-                    <span className="text-sm">{station.type}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Battery className="h-4 w-4 text-secondary" />
-                    <span className="text-sm">{station.power}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-primary">₦{station.price}/kWh</div>
-                </div>
-              </div>
-
-              {/* Availability */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">Available:</span>
-                  <Badge 
-                    variant={station.available > 0 ? "default" : "destructive"}
-                    className={station.available > 0 ? "bg-green-100 text-green-800" : ""}
-                  >
-                    {station.available}/{station.total} slots
-                  </Badge>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Navigation className="h-4 w-4 mr-1" />
-                    Navigate
-                  </Button>
-                  <Button 
-                    variant="energy" 
-                    size="sm"
-                    disabled={station.available === 0}
-                  >
-                    {station.available > 0 ? 'Reserve' : 'Full'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Map View Button */}
-      <Button variant="outline" size="lg" className="w-full">
-        <MapPin className="h-5 w-5 mr-2" />
-        View on Map
-      </Button>
-
-      {/* Info Card */}
-      <Card className="p-4 bg-blue-50 border-blue-200">
-        <div className="flex items-start gap-3">
-          <Zap className="h-6 w-6 text-blue-600 mt-1" />
-          <div>
-            <h3 className="font-semibold text-blue-800">Charging Tips</h3>
-            <ul className="text-sm text-blue-700 mt-2 space-y-1">
-              <li>• DC Fast charging is ideal for quick top-ups</li>
-              <li>• AC charging is cheaper for overnight charging</li>
-              <li>• Reserve slots during peak hours</li>
-              <li>• Check your vehicle's max charging speed</li>
-            </ul>
-          </div>
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <CalendarClock className="h-4 w-4 text-primary" />
+          <span className="font-medium text-sm">Charging duration</span>
+        </div>
+        <div className="flex gap-2">
+          {DURATIONS.map((d) => (
+            <Button key={d} size="sm" variant={duration === d ? 'default' : 'outline'} onClick={() => setDuration(d)}>
+              {d} min
+            </Button>
+          ))}
         </div>
       </Card>
+
+      {loading ? (
+        <div className="flex justify-center py-10 text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      ) : visibleStations.length === 0 ? (
+        <Card className="p-6 text-center text-sm text-muted-foreground">
+          No charging ports published by stations yet. Ports appear here as soon as a station adds them in the portal.
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {visibleStations.map((station) => (
+            <Card key={station.ownerId} className="p-4 space-y-3">
+              <div>
+                <h3 className="font-semibold">{station.name}</h3>
+                {station.address && <p className="text-sm text-muted-foreground">{station.address}</p>}
+              </div>
+
+              <div className="space-y-3">
+                {station.ports.map((port) => {
+                  const status = bookingByPort.get(port.id);
+                  return (
+                    <div key={port.id} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium">{port.port_code ?? 'Port'}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {port.charging_type ?? 'Charging'}
+                            {port.connector_type ? ` • ${port.connector_type}` : ''}
+                          </div>
+                        </div>
+                        <Badge variant={port.is_available ? 'default' : 'destructive'}>
+                          {port.is_available ? 'Available' : 'Not available'}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1">
+                            <Battery className="h-4 w-4 text-secondary" />
+                            {port.power_kw ? `${port.power_kw} kW` : '—'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Plug className="h-4 w-4 text-primary" />
+                            {port.price_per_kwh != null ? `₦${port.price_per_kwh}/kWh` : 'Price on site'}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="energy"
+                          disabled={!port.is_available || busyPortId === port.id}
+                          onClick={() => handleBook(port)}
+                        >
+                          {busyPortId === port.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : port.is_available ? (
+                            'Book'
+                          ) : (
+                            'Unavailable'
+                          )}
+                        </Button>
+                      </div>
+
+                      {status && (
+                        <div className="text-xs">
+                          Your booking:{' '}
+                          <span
+                            className={
+                              status === 'confirmed'
+                                ? 'text-green-600 font-medium'
+                                : status === 'cancelled' || status === 'rejected'
+                                  ? 'text-destructive font-medium'
+                                  : 'text-muted-foreground font-medium'
+                            }
+                          >
+                            {status}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {bookings.length > 0 && (
+        <Card className="p-4">
+          <h3 className="font-semibold mb-3">My bookings</h3>
+          <div className="space-y-2">
+            {bookings.slice(0, 5).map((b) => (
+              <div key={b.id} className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {b.start_time ? new Date(b.start_time).toLocaleString() : 'Scheduled'} • {b.duration_minutes ?? 0} min
+                </span>
+                <Badge variant={b.status === 'confirmed' ? 'default' : 'secondary'}>{b.status ?? 'pending'}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

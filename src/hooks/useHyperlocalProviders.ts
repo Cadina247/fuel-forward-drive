@@ -58,6 +58,32 @@ export function quoteDelivery(logisticsKm: number, level: ServiceLevel) {
   return Math.round((p.base + p.perKm * logisticsKm + p.handling) / 50) * 50;
 }
 
+/** Line-by-line fee + ETA breakdown shown to the customer. */
+export function deliveryBreakdown(logisticsKm: number, level: ServiceLevel, activeJobs = 0) {
+  const p = PRICING[level];
+  const distanceFee = Math.round(p.perKm * logisticsKm);
+  const total = quoteDelivery(logisticsKm, level);
+  const travelMinutes = Math.round(logisticsKm * p.minutesPerKm);
+  const queueMinutes = activeJobs * 6;
+  const handlingMinutes = level === 'fast' ? 3 : 6;
+  return {
+    lines: [
+      { label: 'Base dispatch fee', value: p.base },
+      { label: `Distance (${logisticsKm.toFixed(1)} km @ ₦${p.perKm}/km)`, value: distanceFee },
+      { label: 'Handling & container care', value: p.handling },
+      { label: 'Rounding', value: total - (p.base + distanceFee + p.handling) },
+    ],
+    total,
+    eta: [
+      { label: 'Rider travel time', minutes: travelMinutes },
+      { label: 'Station pickup & loading', minutes: handlingMinutes },
+      { label: 'Queue (active jobs)', minutes: queueMinutes },
+    ],
+    etaMinutes: Math.max(5, travelMinutes + handlingMinutes + queueMinutes),
+  };
+}
+
+
 interface Options {
   customer?: { lat: number; lng: number } | null;
   station?: { lat: number; lng: number } | null;
