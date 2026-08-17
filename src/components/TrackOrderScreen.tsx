@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Truck, 
-  ArrowLeft, 
-  MapPin, 
-  Clock, 
+import DriverContactSheet from '@/components/DriverContactSheet';
+import useHyperlocalProviders, { deliveryBreakdown } from '@/hooks/useHyperlocalProviders';
+import {
+  Truck,
+  ArrowLeft,
+  MapPin,
+  Clock,
   Phone,
   MessageSquare,
   CheckCircle,
   User,
-  Navigation
+  Navigation,
+  Wifi,
+  Receipt,
 } from 'lucide-react';
 
 interface TrackOrderScreenProps {
@@ -21,6 +25,13 @@ interface TrackOrderScreenProps {
 
 const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
   const [currentProgress, setCurrentProgress] = useState(75);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [contactTab, setContactTab] = useState<'call' | 'chat'>('call');
+
+  // Live hyperlocal provider availability from the shared portal backend.
+  const { providers, allProviders, loading: providersLoading } = useHyperlocalProviders({
+    serviceLevel: 'standard',
+  });
 
   // Mock order data
   const orderData = {
@@ -33,6 +44,7 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
     station: 'Shell - Victoria Island',
     address: '15 Admiralty Way, Lekki Phase 1, Lagos',
     estimatedTime: '15-20 minutes',
+    serviceLevel: 'standard' as const,
     driver: {
       name: 'Ahmed Ibrahim',
       phone: '+234 801 234 5678',
@@ -74,6 +86,27 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
     ]
   };
 
+  // The assigned provider (falls back to the best-ranked live partner).
+  const assigned = providers[0];
+  const breakdown = useMemo(
+    () => deliveryBreakdown(assigned?.logisticsKm ?? 6.4, orderData.serviceLevel, assigned?.activeJobs ?? 0),
+    [assigned?.logisticsKm, assigned?.activeJobs]
+  );
+
+  const driver = {
+    name: assigned?.name ?? orderData.driver.name,
+    phone: assigned?.phone ?? orderData.driver.phone,
+    vehicle: assigned?.vehicle ?? orderData.driver.vehicle,
+    rating: assigned?.rating ?? orderData.driver.rating,
+    isOnline: assigned ? assigned.isAvailable : true,
+    etaMinutes: breakdown.etaMinutes,
+  };
+
+  const openContact = (tab: 'call' | 'chat') => {
+    setContactTab(tab);
+    setContactOpen(true);
+  };
+
   useEffect(() => {
     // Simulate real-time progress updates
     const interval = setInterval(() => {
@@ -85,6 +118,7 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
 
     return () => clearInterval(interval);
   }, []);
+
 
   return (
     <div className="p-4 space-y-6">
