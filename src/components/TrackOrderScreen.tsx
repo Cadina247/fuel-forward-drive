@@ -177,31 +177,124 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
       <Card className="p-4">
         <h3 className="font-semibold mb-3">Your Driver</h3>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => openContact('call')}
+            aria-label={`Contact ${driver.name}`}
+            className="relative w-16 h-16 bg-muted rounded-full flex items-center justify-center hover:ring-2 hover:ring-primary transition-all"
+          >
             <User className="h-8 w-8 text-muted-foreground" />
-          </div>
+            <span
+              className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-background ${
+                driver.isOnline ? 'bg-green-500' : 'bg-muted-foreground'
+              }`}
+            />
+          </button>
           <div className="flex-1">
-            <h4 className="font-medium">{orderData.driver.name}</h4>
-            <p className="text-sm text-muted-foreground">{orderData.driver.vehicle}</p>
+            <h4 className="font-medium">{driver.name}</h4>
+            <p className="text-sm text-muted-foreground">{driver.vehicle}</p>
             <div className="flex items-center gap-1 mt-1">
               <div className="flex text-yellow-400">
-                {'★'.repeat(Math.floor(orderData.driver.rating))}
+                {'★'.repeat(Math.floor(driver.rating))}
               </div>
-              <span className="text-sm text-muted-foreground">({orderData.driver.rating})</span>
+              <span className="text-sm text-muted-foreground">({driver.rating})</span>
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => openContact('call')}>
               <Phone className="h-4 w-4 mr-1" />
               Call
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => openContact('chat')}>
               <MessageSquare className="h-4 w-4 mr-1" />
               Chat
             </Button>
           </div>
         </div>
+        <p className="text-xs text-muted-foreground mt-3">Tap the driver photo to call or chat.</p>
       </Card>
+
+      {/* Fee & ETA Breakdown */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Receipt className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold">Fee & ETA breakdown</h3>
+        </div>
+        <div className="space-y-2 text-sm">
+          {breakdown.lines.map((line) => (
+            <div key={line.label} className="flex justify-between">
+              <span className="text-muted-foreground">{line.label}</span>
+              <span className="font-medium">
+                {line.value < 0 ? '-' : ''}₦{Math.abs(line.value).toLocaleString()}
+              </span>
+            </div>
+          ))}
+          <div className="flex justify-between border-t pt-2 font-semibold">
+            <span>Delivery total</span>
+            <span>₦{breakdown.total.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between border-t pt-2 font-semibold">
+            <span>Order total</span>
+            <span>₦{(orderData.amount + breakdown.total).toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-2 text-sm">
+          {breakdown.eta.map((step) => (
+            <div key={step.label} className="flex justify-between">
+              <span className="text-muted-foreground">{step.label}</span>
+              <span className="font-medium">{step.minutes} min</span>
+            </div>
+          ))}
+          <div className="flex justify-between border-t pt-2 font-semibold">
+            <span className="flex items-center gap-1">
+              <Clock className="h-4 w-4" /> Estimated arrival
+            </span>
+            <span>~{breakdown.etaMinutes} min</span>
+          </div>
+        </div>
+      </Card>
+
+      {/* Real-time provider availability */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Delivery partners nearby</h3>
+          <span className="text-xs flex items-center gap-1 text-muted-foreground">
+            <Wifi className="h-3 w-3 text-green-600" /> Live
+          </span>
+        </div>
+        {providersLoading ? (
+          <p className="text-sm text-muted-foreground">Checking partner availability…</p>
+        ) : providers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No partners available in your area right now — your order stays with the station rider.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {providers.map((p, i) => (
+              <div key={p.id} className="flex items-center justify-between text-sm">
+                <div>
+                  <div className="font-medium flex items-center gap-2">
+                    {p.name}
+                    {i === 0 && <Badge variant="default">Assigned</Badge>}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {p.distanceKm.toFixed(1)} km • {p.pickupMinutes} min pickup • {p.activeJobs} active job
+                    {p.activeJobs === 1 ? '' : 's'}
+                  </div>
+                </div>
+                <Badge variant={p.isAvailable ? 'secondary' : 'destructive'}>
+                  {p.isAvailable ? 'Available' : 'Busy'}
+                </Badge>
+              </div>
+            ))}
+            <p className="text-xs text-muted-foreground">
+              {allProviders.filter((p) => p.isAvailable).length} of {allProviders.length} partners online
+            </p>
+          </div>
+        )}
+      </Card>
+
 
       {/* Order Details */}
       <Card className="p-4">
