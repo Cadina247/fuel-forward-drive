@@ -389,7 +389,15 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
           </p>
         </div>
       </Card>
+
+      <DriverContactSheet
+        open={contactOpen}
+        onOpenChange={setContactOpen}
+        driver={driver}
+        defaultTab={contactTab}
+      />
     </div>
+
   );
 };
 
