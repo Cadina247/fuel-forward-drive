@@ -410,8 +410,18 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
           <h3 className="font-semibold text-blue-800 mb-2">Your PODC</h3>
           <div className="text-3xl font-bold text-blue-900 mb-2">{orderData.podc}</div>
           <p className="text-sm text-blue-700">
-            Share this code with the driver upon delivery to confirm receipt
+            Share this code with the driver upon delivery, then confirm it here.
           </p>
+          {delivered ? (
+            <Badge variant="secondary" className="mt-3">
+              <CheckCircle className="h-3 w-3 mr-1" /> Delivery confirmed
+            </Badge>
+          ) : (
+            <Button className="mt-4 w-full" size="lg" onClick={() => setPodcOpen(true)}>
+              <ShieldCheck className="h-5 w-5 mr-2" />
+              Verify PODC & confirm delivery
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -420,6 +430,18 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
         onOpenChange={setContactOpen}
         driver={driver}
         defaultTab={contactTab}
+      />
+
+      <PodcVerificationSheet
+        open={podcOpen}
+        onOpenChange={setPodcOpen}
+        expectedCode={orderData.podc}
+        orderId={orderData.id}
+        destination={DEFAULT_LOCATION}
+        onVerified={() => {
+          setDelivered(true);
+          setCurrentProgress(100);
+        }}
       />
     </div>
 
