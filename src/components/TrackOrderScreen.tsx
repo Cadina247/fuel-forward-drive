@@ -4,7 +4,9 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import DriverContactSheet from '@/components/DriverContactSheet';
+import PodcVerificationSheet from '@/components/PodcVerificationSheet';
 import useHyperlocalProviders, { deliveryBreakdown } from '@/hooks/useHyperlocalProviders';
+import { DEFAULT_LOCATION } from '@/hooks/useNearbyStations';
 import {
   Truck,
   ArrowLeft,
@@ -17,21 +19,44 @@ import {
   Navigation,
   Wifi,
   Receipt,
+  RefreshCw,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface TrackOrderScreenProps {
   onBack: () => void;
 }
 
+function timeAgo(ts: number) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 10) return 'just now';
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
+}
+
 const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
   const [currentProgress, setCurrentProgress] = useState(75);
   const [contactOpen, setContactOpen] = useState(false);
   const [contactTab, setContactTab] = useState<'call' | 'chat'>('call');
+  const [podcOpen, setPodcOpen] = useState(false);
+  const [delivered, setDelivered] = useState(false);
+  const [, setTick] = useState(0);
 
   // Live hyperlocal provider availability from the shared portal backend.
-  const { providers, allProviders, loading: providersLoading } = useHyperlocalProviders({
-    serviceLevel: 'standard',
-  });
+  const {
+    providers,
+    allProviders,
+    loading: providersLoading,
+    lastUpdated,
+    refresh,
+  } = useHyperlocalProviders({ serviceLevel: 'standard' });
+
+  // Keep the "updated x ago" label fresh.
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, []);
 
   // Mock order data
   const orderData = {
