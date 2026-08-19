@@ -28,6 +28,16 @@ const Index = () => {
   const { session, profile, loading } = useAuth();
   const userName = profile?.full_name ?? undefined;
 
+  // Live push/in-app alerts for order + EV booking/port changes.
+  const { permission, enablePush } = useAppNotifications(session?.user?.id ?? null);
+
+  useEffect(() => {
+    if (session?.user && permission === 'default') {
+      // Ask once, right after sign-in, so status changes can be pushed.
+      enablePush();
+    }
+  }, [session?.user, permission, enablePush]);
+
 
   const handleNavigate = (screen: string) => {
     setCurrentScreen(screen);
