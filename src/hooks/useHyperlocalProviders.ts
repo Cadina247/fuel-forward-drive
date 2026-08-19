@@ -198,7 +198,7 @@ export function useHyperlocalProviders({
       .slice(0, 3);
   }, [providers, customer, station, serviceLevel, radiusKm]);
 
-  return { providers: ranked, allProviders: providers, loading };
+  return { providers: ranked, allProviders: providers, loading, lastUpdated, refresh: load };
 }
 
 export default useHyperlocalProviders;
