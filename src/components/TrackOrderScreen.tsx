@@ -282,11 +282,18 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
 
       {/* Real-time provider availability */}
       <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1">
           <h3 className="font-semibold">Delivery partners nearby</h3>
           <span className="text-xs flex items-center gap-1 text-muted-foreground">
             <Wifi className="h-3 w-3 text-green-600" /> Live
           </span>
+        </div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-muted-foreground">Updated {timeAgo(lastUpdated)}</p>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => refresh()}>
+            <RefreshCw className={`h-3 w-3 mr-1 ${providersLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
         {providersLoading ? (
           <p className="text-sm text-muted-foreground">Checking partner availability…</p>
