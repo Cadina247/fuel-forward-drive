@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
 import HomeScreen from '@/components/HomeScreen';
@@ -17,6 +17,7 @@ import FundWalletScreen from '@/components/FundWalletScreen';
 
 import ProfileScreen from '@/components/ProfileScreen';
 import { useAuth } from '@/contexts/AuthContext';
+import useAppNotifications from '@/hooks/useAppNotifications';
 import { OrderBroadcast, IncomingOrder } from '@/services/OrderBroadcast';
 
 const Index = () => {
