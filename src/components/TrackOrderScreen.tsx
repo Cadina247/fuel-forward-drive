@@ -4,7 +4,9 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import DriverContactSheet from '@/components/DriverContactSheet';
+import PodcVerificationSheet from '@/components/PodcVerificationSheet';
 import useHyperlocalProviders, { deliveryBreakdown } from '@/hooks/useHyperlocalProviders';
+import { DEFAULT_LOCATION } from '@/hooks/useNearbyStations';
 import {
   Truck,
   ArrowLeft,
@@ -17,21 +19,44 @@ import {
   Navigation,
   Wifi,
   Receipt,
+  RefreshCw,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface TrackOrderScreenProps {
   onBack: () => void;
 }
 
+function timeAgo(ts: number) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 10) return 'just now';
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
+}
+
 const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
   const [currentProgress, setCurrentProgress] = useState(75);
   const [contactOpen, setContactOpen] = useState(false);
   const [contactTab, setContactTab] = useState<'call' | 'chat'>('call');
+  const [podcOpen, setPodcOpen] = useState(false);
+  const [delivered, setDelivered] = useState(false);
+  const [, setTick] = useState(0);
 
   // Live hyperlocal provider availability from the shared portal backend.
-  const { providers, allProviders, loading: providersLoading } = useHyperlocalProviders({
-    serviceLevel: 'standard',
-  });
+  const {
+    providers,
+    allProviders,
+    loading: providersLoading,
+    lastUpdated,
+    refresh,
+  } = useHyperlocalProviders({ serviceLevel: 'standard' });
+
+  // Keep the "updated x ago" label fresh.
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, []);
 
   // Mock order data
   const orderData = {
@@ -257,11 +282,18 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
 
       {/* Real-time provider availability */}
       <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1">
           <h3 className="font-semibold">Delivery partners nearby</h3>
           <span className="text-xs flex items-center gap-1 text-muted-foreground">
             <Wifi className="h-3 w-3 text-green-600" /> Live
           </span>
+        </div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-muted-foreground">Updated {timeAgo(lastUpdated)}</p>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => refresh()}>
+            <RefreshCw className={`h-3 w-3 mr-1 ${providersLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
         {providersLoading ? (
           <p className="text-sm text-muted-foreground">Checking partner availability…</p>
@@ -385,8 +417,18 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
           <h3 className="font-semibold text-blue-800 mb-2">Your PODC</h3>
           <div className="text-3xl font-bold text-blue-900 mb-2">{orderData.podc}</div>
           <p className="text-sm text-blue-700">
-            Share this code with the driver upon delivery to confirm receipt
+            Share this code with the driver upon delivery, then confirm it here.
           </p>
+          {delivered ? (
+            <Badge variant="secondary" className="mt-3">
+              <CheckCircle className="h-3 w-3 mr-1" /> Delivery confirmed
+            </Badge>
+          ) : (
+            <Button className="mt-4 w-full" size="lg" onClick={() => setPodcOpen(true)}>
+              <ShieldCheck className="h-5 w-5 mr-2" />
+              Verify PODC & confirm delivery
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -395,6 +437,18 @@ const TrackOrderScreen: React.FC<TrackOrderScreenProps> = ({ onBack }) => {
         onOpenChange={setContactOpen}
         driver={driver}
         defaultTab={contactTab}
+      />
+
+      <PodcVerificationSheet
+        open={podcOpen}
+        onOpenChange={setPodcOpen}
+        expectedCode={orderData.podc}
+        orderId={orderData.id}
+        destination={DEFAULT_LOCATION}
+        onVerified={() => {
+          setDelivered(true);
+          setCurrentProgress(100);
+        }}
       />
     </div>
 

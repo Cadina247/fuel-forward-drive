@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { DEFAULT_LOCATION, haversineKm } from '@/hooks/useNearbyStations';
 
@@ -99,36 +99,44 @@ export function useHyperlocalProviders({
 }: Options) {
   const [providers, setProviders] = useState<DeliveryProvider[]>(FALLBACK_PROVIDERS);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<number>(() => Date.now());
+  const mounted = useRef(true);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('delivery_providers' as never).select('*');
+    if (!mounted.current) return;
+    const rows = (data as any[]) || [];
+    if (rows.length) {
+      setProviders(
+        rows.map((r, i) => ({
+          id: String(r.id ?? `provider-${i}`),
+          name: r.business_name ?? r.name ?? 'Delivery partner',
+          phone: r.phone ?? null,
+          lat: Number(r.latitude ?? r.lat ?? DEFAULT_LOCATION.lat),
+          lng: Number(r.longitude ?? r.lng ?? DEFAULT_LOCATION.lng),
+          serviceArea: r.service_area ?? r.area ?? null,
+          isAvailable: r.is_available ?? r.is_online ?? true,
+          activeJobs: Number(r.active_jobs ?? 0),
+          rating: Number(r.rating ?? 4.5),
+          fastTrack: Boolean(r.fast_track_enabled ?? r.fast_track ?? true),
+          vehicle: r.vehicle_type ?? r.vehicle ?? null,
+        }))
+      );
+    }
+    setLastUpdated(Date.now());
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data } = await supabase.from('delivery_providers' as never).select('*');
-      if (!active) return;
-      const rows = (data as any[]) || [];
-      if (rows.length) {
-        setProviders(
-          rows.map((r, i) => ({
-            id: String(r.id ?? `provider-${i}`),
-            name: r.business_name ?? r.name ?? 'Delivery partner',
-            phone: r.phone ?? null,
-            lat: Number(r.latitude ?? r.lat ?? DEFAULT_LOCATION.lat),
-            lng: Number(r.longitude ?? r.lng ?? DEFAULT_LOCATION.lng),
-            serviceArea: r.service_area ?? r.area ?? null,
-            isAvailable: r.is_available ?? r.is_online ?? true,
-            activeJobs: Number(r.active_jobs ?? 0),
-            rating: Number(r.rating ?? 4.5),
-            fastTrack: Boolean(r.fast_track_enabled ?? r.fast_track ?? true),
-            vehicle: r.vehicle_type ?? r.vehicle ?? null,
-          }))
-        );
-      }
-      setLoading(false);
-    })();
+    mounted.current = true;
+    load();
+    // Safety-net refresh in case a Realtime event is missed.
+    const poll = setInterval(load, 60_000);
     return () => {
-      active = false;
+      mounted.current = false;
+      clearInterval(poll);
     };
-  }, []);
+  }, [load]);
 
   // Live availability/workload changes published by the portal.
   useEffect(() => {
@@ -136,9 +144,17 @@ export function useHyperlocalProviders({
       .channel('delivery_providers_live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_providers' }, (payload) => {
         const row = payload.new as any;
-        if (!row?.id) return;
-        setProviders((prev) =>
-          prev.map((p) =>
+        if (!row?.id) {
+          // Insert/delete — pull the full list again.
+          load();
+          return;
+        }
+        setProviders((prev) => {
+          if (!prev.some((p) => p.id === String(row.id))) {
+            load();
+            return prev;
+          }
+          return prev.map((p) =>
             p.id === String(row.id)
               ? {
                   ...p,
@@ -146,14 +162,15 @@ export function useHyperlocalProviders({
                   activeJobs: Number(row.active_jobs ?? p.activeJobs),
                 }
               : p
-          )
-        );
+          );
+        });
+        setLastUpdated(Date.now());
       })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [load]);
 
   const ranked = useMemo<RankedProvider[]>(() => {
     const cust = customer ?? DEFAULT_LOCATION;
@@ -181,7 +198,7 @@ export function useHyperlocalProviders({
       .slice(0, 3);
   }, [providers, customer, station, serviceLevel, radiusKm]);
 
-  return { providers: ranked, allProviders: providers, loading };
+  return { providers: ranked, allProviders: providers, loading, lastUpdated, refresh: load };
 }
 
 export default useHyperlocalProviders;
