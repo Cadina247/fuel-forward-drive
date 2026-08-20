@@ -144,8 +144,8 @@ const PodcVerificationSheet: React.FC<Props> = ({
       setError('Enter all 6 digits of the PODC.');
       return;
     }
-    if (locationState !== 'ok') {
-      setError('Location check must pass before confirming delivery.');
+    if (locationState === 'checking') {
+      setError('Hold on — still checking your location.');
       return;
     }
     setVerifying(true);
@@ -180,26 +180,19 @@ const PodcVerificationSheet: React.FC<Props> = ({
               <div className="flex items-center gap-2 text-sm font-medium">
                 <MapPin className="h-4 w-4 text-primary" /> Location check
               </div>
-              <Badge
-                variant={
-                  locationState === 'ok'
-                    ? 'secondary'
-                    : locationState === 'fail'
-                      ? 'destructive'
-                      : 'outline'
-                }
-              >
+              <Badge variant={locationState === 'ok' ? 'secondary' : 'outline'}>
                 {locationState === 'checking'
                   ? 'Checking…'
                   : locationState === 'ok'
                     ? 'At delivery point'
                     : locationState === 'fail'
-                      ? 'Failed'
+                      ? 'Unconfirmed (optional)'
                       : 'Pending'}
               </Badge>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
               {locationMessage || 'Verifying that you are at the delivery address…'}
+              {locationState === 'fail' && ' You can still confirm with the correct PODC.'}
             </p>
             {locationState !== 'ok' && (
               <Button variant="outline" size="sm" className="mt-3" onClick={checkLocation}>
@@ -265,7 +258,7 @@ const PodcVerificationSheet: React.FC<Props> = ({
               <Button
                 className="w-full"
                 size="lg"
-                disabled={verifying || code.length !== 6 || locationState !== 'ok'}
+                disabled={verifying || code.length !== 6 || locationState === 'checking'}
                 onClick={verify}
               >
                 {verifying ? (
