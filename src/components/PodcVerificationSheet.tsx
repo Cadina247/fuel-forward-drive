@@ -144,8 +144,8 @@ const PodcVerificationSheet: React.FC<Props> = ({
       setError('Enter all 6 digits of the PODC.');
       return;
     }
-    if (locationState !== 'ok') {
-      setError('Location check must pass before confirming delivery.');
+    if (locationState === 'checking') {
+      setError('Hold on — still checking your location.');
       return;
     }
     setVerifying(true);
