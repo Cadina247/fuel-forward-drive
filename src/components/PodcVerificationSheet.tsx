@@ -265,7 +265,7 @@ const PodcVerificationSheet: React.FC<Props> = ({
               <Button
                 className="w-full"
                 size="lg"
-                disabled={verifying || code.length !== 6 || locationState !== 'ok'}
+                disabled={verifying || code.length !== 6 || locationState === 'checking'}
                 onClick={verify}
               >
                 {verifying ? (
