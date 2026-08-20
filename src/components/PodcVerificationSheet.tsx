@@ -192,6 +192,7 @@ const PodcVerificationSheet: React.FC<Props> = ({
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
               {locationMessage || 'Verifying that you are at the delivery address…'}
+              {locationState === 'fail' && ' You can still confirm with the correct PODC.'}
             </p>
             {locationState !== 'ok' && (
               <Button variant="outline" size="sm" className="mt-3" onClick={checkLocation}>
