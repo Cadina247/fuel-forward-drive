@@ -180,21 +180,13 @@ const PodcVerificationSheet: React.FC<Props> = ({
               <div className="flex items-center gap-2 text-sm font-medium">
                 <MapPin className="h-4 w-4 text-primary" /> Location check
               </div>
-              <Badge
-                variant={
-                  locationState === 'ok'
-                    ? 'secondary'
-                    : locationState === 'fail'
-                      ? 'destructive'
-                      : 'outline'
-                }
-              >
+              <Badge variant={locationState === 'ok' ? 'secondary' : 'outline'}>
                 {locationState === 'checking'
                   ? 'Checking…'
                   : locationState === 'ok'
                     ? 'At delivery point'
                     : locationState === 'fail'
-                      ? 'Failed'
+                      ? 'Unconfirmed (optional)'
                       : 'Pending'}
               </Badge>
             </div>
