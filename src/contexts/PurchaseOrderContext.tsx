@@ -328,8 +328,7 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
         void supabase
           .from('podc_codes' as never)
           .insert({ purchase_order_id: order.id, code: digits, full_code: podcCode } as never)
-          .then(() => undefined)
-          .catch(() => undefined);
+          .then(() => undefined, () => undefined);
       }, 5000);
     } else if (order.status === 'IN_TRANSIT') {
       const start = Date.now();
@@ -365,8 +364,7 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
         .from('podc_codes' as never)
         .update({ verified_at: new Date().toISOString() } as never)
         .eq('purchase_order_id', order.id)
-        .then(() => undefined)
-        .catch(() => undefined);
+        .then(() => undefined, () => undefined);
       window.setTimeout(() => advanceStatus('DELIVERY_VERIFIED'), 1200);
       return true;
     },
@@ -381,8 +379,7 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
       .from('purchase_orders' as never)
       .update({ cancelled: true, status: 'CANCELLED' } as never)
       .eq('id', order.id)
-      .then(() => undefined)
-      .catch(() => undefined);
+      .then(() => undefined, () => undefined);
     toast({ title: 'Order cancelled', description: `${order.poCode} has been cancelled.` });
   }, [order, toast]);
 
@@ -403,8 +400,7 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
         .from('purchase_orders' as never)
         .update({ rating_driver: rating.driver ?? null, rating_station: rating.station ?? null, status: 'COMPLETED' } as never)
         .eq('id', order.id)
-        .then(() => undefined)
-        .catch(() => undefined);
+        .then(() => undefined, () => undefined);
     },
     [order]
   );
