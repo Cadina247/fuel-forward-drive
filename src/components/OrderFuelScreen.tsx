@@ -433,12 +433,26 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
                 </Card>
               </div>
 
-              <Button variant="fuel" size="xl" className="w-full" onClick={() => setStep('delivery')}>
-                Continue to Delivery
+              <Button variant="fuel" size="xl" className="w-full" onClick={() => setStep('priority')}>
+                Continue to Priority Stations
               </Button>
             </>
           )}
         </>
+      )}
+
+      {/* STEP: three-station priority selection (after product & quantity, before checkout) */}
+      {step === 'priority' && station && product && (
+        <StationPriorityPicker
+          customer={coords}
+          stations={stations}
+          initialStationId={station.id}
+          productName={product.product_name}
+          onConfirm={(list) => {
+            setPriorityStations(list);
+            setStep('delivery');
+          }}
+        />
       )}
 
       {/* STEP 5 + 6 */}
@@ -601,6 +615,23 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
                 <span>Station</span>
                 <span className="font-medium">{station.name}</span>
               </div>
+              {priorityStations.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-muted-foreground text-xs">Fulfilment priority</span>
+                  {priorityStations.map((s, i) => (
+                    <div key={s.id} className="flex items-center gap-2 text-xs">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          i === 0 ? 'bg-green-500' : i === 1 ? 'bg-yellow-400' : 'bg-blue-500'
+                        }`}
+                      />
+                      <span className="font-medium truncate">
+                        {i + 1}. {s.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Delivery to</span>
                 <span className="font-medium text-right max-w-[60%]">{address}</span>
