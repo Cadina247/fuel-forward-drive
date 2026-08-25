@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
 import HomeScreen from '@/components/HomeScreen';
@@ -7,7 +7,9 @@ import StationDetailsScreen from '@/components/StationDetailsScreen';
 import TokenGeneratorScreen from '@/components/TokenGeneratorScreen';
 import EVChargingScreen from '@/components/EVChargingScreen';
 import SoftLoanScreen from '@/components/SoftLoanScreen';
-import TrackOrderScreen from '@/components/TrackOrderScreen';
+import LiveOrderTracking from '@/components/LiveOrderTracking';
+import PurchaseOrderConfirmation from '@/components/PurchaseOrderConfirmation';
+import PodcReceiptScreen from '@/components/PodcReceiptScreen';
 import CookingGasScreen from '@/components/CookingGasScreen';
 import DeliveryProviderRegistrationScreen from '@/components/DeliveryProviderRegistrationScreen';
 import StationIncomingOrdersScreen from '@/components/StationIncomingOrdersScreen';
@@ -17,7 +19,9 @@ import FundWalletScreen from '@/components/FundWalletScreen';
 
 import ProfileScreen from '@/components/ProfileScreen';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePurchaseOrder } from '@/contexts/PurchaseOrderContext';
 import useAppNotifications from '@/hooks/useAppNotifications';
+import { DEFAULT_LOCATION } from '@/hooks/useNearbyStations';
 import { OrderBroadcast, IncomingOrder } from '@/services/OrderBroadcast';
 
 const Index = () => {
@@ -28,6 +32,22 @@ const Index = () => {
   const { toast } = useToast();
   const { session, profile, loading } = useAuth();
   const userName = profile?.full_name ?? undefined;
+  const { order: activePO, createPurchaseOrder } = usePurchaseOrder();
+
+  // PODC receipt auto-appears the moment the backend generates the code.
+  const lastPodcRef = useRef<string | null>(null);
+  useEffect(() => {
+    const code = activePO?.podc ?? null;
+    if (!code) {
+      lastPodcRef.current = null;
+      return;
+    }
+    if (lastPodcRef.current === code) return;
+    lastPodcRef.current = code;
+    setCurrentScreen((s) =>
+      ['track-order', 'podc-receipt', 'po-confirmation', 'order-fuel'].includes(s) ? s : 'podc-receipt'
+    );
+  }, [activePO?.podc]);
 
   // Live push/in-app alerts for order + EV booking/port changes.
   const { permission, enablePush } = useAppNotifications(session?.user?.id ?? null);
@@ -61,6 +81,30 @@ const Index = () => {
   };
 
   const handlePlaceOrder = (orderData: any) => {
+    // Purchase Order flow — customer paid after picking up to 3 priority stations.
+    if (Array.isArray(orderData?.priorityStations) && orderData.priorityStations.length > 0) {
+      createPurchaseOrder({
+        productName: orderData?.fuelType?.name ?? 'Fuel',
+        quantity: Number(orderData?.quantity ?? 0),
+        unit: orderData?.unit ?? 'L',
+        subtotal: Number(orderData?.subtotal ?? 0),
+        deliveryFee: Number(orderData?.deliveryFee ?? 0),
+        totalAmount: Number(orderData?.totalAmount ?? 0),
+        address: orderData?.address ?? '',
+        destination: orderData?.destination ?? DEFAULT_LOCATION,
+        serviceLevel: orderData?.serviceLevel === 'fast' ? 'fast' : 'standard',
+        paymentMethod: orderData?.paymentMethod ?? 'wallet',
+        priorityStations: orderData.priorityStations,
+      });
+      toast({
+        title: 'Payment confirmed 🎉',
+        description: 'Your Purchase Order has been generated.',
+        duration: 5000,
+      });
+      setCurrentScreen('po-confirmation');
+      return;
+    }
+
     // New flow: the customer already picked a specific station, so we skip the
     // broadcast/auction and record the order with a pending payment state.
     if (orderData?.paymentStatus === 'pending') {
@@ -136,7 +180,21 @@ const Index = () => {
       case 'soft-loan':
         return <SoftLoanScreen onBack={() => setCurrentScreen('home')} />;
       case 'track-order':
-        return <TrackOrderScreen onBack={() => setCurrentScreen('home')} />;
+        return (
+          <LiveOrderTracking
+            onBack={() => setCurrentScreen('home')}
+            onHome={() => setCurrentScreen('home')}
+          />
+        );
+      case 'po-confirmation':
+        return (
+          <PurchaseOrderConfirmation
+            onTrack={() => setCurrentScreen('track-order')}
+            onHome={() => setCurrentScreen('home')}
+          />
+        );
+      case 'podc-receipt':
+        return <PodcReceiptScreen onBack={() => setCurrentScreen('track-order')} />;
       case 'delivery-provider-registration':
         return <DeliveryProviderRegistrationScreen onBack={() => setCurrentScreen('home')} />;
       case 'station-incoming':

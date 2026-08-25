@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import VendorsNearby from '@/components/VendorsNearby';
+import StationPriorityPicker from '@/components/StationPriorityPicker';
+import { PriorityStation } from '@/contexts/PurchaseOrderContext';
 
 import { useFuelProducts } from '@/hooks/useFuelProducts';
 import { useNearbyStations, NearbyStation } from '@/hooks/useNearbyStations';
@@ -42,7 +44,7 @@ interface OrderFuelScreenProps {
 }
 
 
-type Step = 'browse' | 'products' | 'delivery' | 'checkout';
+type Step = 'browse' | 'products' | 'priority' | 'delivery' | 'checkout';
 
 /** National reference prices (informational only). */
 const NATIONAL_PRICES = [
@@ -61,6 +63,7 @@ const unitForProduct = (name?: string | null, unit?: string | null) => {
 const STEP_LABELS: Record<Step, string> = {
   browse: 'Choose Station',
   products: 'Select Product',
+  priority: 'Priority Stations',
   delivery: 'Delivery Details',
   checkout: 'Checkout',
 };
@@ -69,6 +72,7 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const [step, setStep] = useState<Step>('browse');
   const [radiusKm, setRadiusKm] = useState(15);
   const [station, setStation] = useState<NearbyStation | null>(null);
+  const [priorityStations, setPriorityStations] = useState<PriorityStation[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(20);
   const [address, setAddress] = useState('15 Admiralty Way, Lekki Phase 1, Lagos');
@@ -139,7 +143,8 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
   const goBack = () => {
     if (step === 'browse') return onBack();
     if (step === 'products') return setStep('browse');
-    if (step === 'delivery') return setStep('products');
+    if (step === 'priority') return setStep('products');
+    if (step === 'delivery') return setStep('priority');
     return setStep('delivery');
   };
 
@@ -168,6 +173,9 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
       deliveryFee,
       totalAmount: total,
       paymentMethod,
+      priorityStations,
+      destination: coords,
+      subtotal,
       paymentStatus: 'pending',
       walletPaid: paymentStatus === 'paid',
       timestamp: new Date().toISOString(),
@@ -425,12 +433,26 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
                 </Card>
               </div>
 
-              <Button variant="fuel" size="xl" className="w-full" onClick={() => setStep('delivery')}>
-                Continue to Delivery
+              <Button variant="fuel" size="xl" className="w-full" onClick={() => setStep('priority')}>
+                Continue to Priority Stations
               </Button>
             </>
           )}
         </>
+      )}
+
+      {/* STEP: three-station priority selection (after product & quantity, before checkout) */}
+      {step === 'priority' && station && product && (
+        <StationPriorityPicker
+          customer={coords}
+          stations={stations}
+          initialStationId={station.id}
+          productName={product.product_name}
+          onConfirm={(list) => {
+            setPriorityStations(list);
+            setStep('delivery');
+          }}
+        />
       )}
 
       {/* STEP 5 + 6 */}
@@ -593,6 +615,23 @@ const OrderFuelScreen: React.FC<OrderFuelScreenProps> = ({ onBack, onPlaceOrder,
                 <span>Station</span>
                 <span className="font-medium">{station.name}</span>
               </div>
+              {priorityStations.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-muted-foreground text-xs">Fulfilment priority</span>
+                  {priorityStations.map((s, i) => (
+                    <div key={s.id} className="flex items-center gap-2 text-xs">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          i === 0 ? 'bg-green-500' : i === 1 ? 'bg-yellow-400' : 'bg-blue-500'
+                        }`}
+                      />
+                      <span className="font-medium truncate">
+                        {i + 1}. {s.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Delivery to</span>
                 <span className="font-medium text-right max-w-[60%]">{address}</span>

@@ -9,6 +9,7 @@ import React, {
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { haversineKm } from '@/hooks/useNearbyStations';
 import {
   PO_STATUS_FLOW,
   POStatus,
@@ -53,6 +54,7 @@ export interface ActiveOrder {
   paymentMethod: string;
   priorityStations: PriorityStation[];
   fulfillingStationId?: string | null;
+  assignedDriverId?: string | null;
   podc?: string;
   podcCode?: string;
   rider?: OrderRider;
@@ -208,37 +210,31 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
       setRiderPos(null);
       setEtaMinutes(null);
 
-      // Best-effort sync to the shared portal tables (if deployed).
+      // Best-effort sync to the shared backend PO tables (if deployed).
       void (async () => {
         try {
           const { error } = await supabase.from('purchase_orders' as never).insert({
             id,
-            po_code: newOrder.poCode,
             customer_id: userId,
-            product_name: p.productName,
-            quantity: p.quantity,
-            unit: p.unit,
-            subtotal: p.subtotal,
-            delivery_fee: p.deliveryFee,
-            total_amount: p.totalAmount,
-            delivery_address: p.address,
-            dest_lat: p.destination.lat,
-            dest_lng: p.destination.lng,
-            service_level: p.serviceLevel,
-            payment_method: p.paymentMethod,
+            po_code: newOrder.poCode,
             status: 'PO_GENERATED',
+            payment_status: 'PAID',
+            delivery_address: p.address,
+            delivery_latitude: p.destination.lat,
+            delivery_longitude: p.destination.lng,
           } as never);
           if (error) return;
           await supabase.from('purchase_order_fulfilment_options' as never).insert(
             p.priorityStations.map((s, i) => ({
               purchase_order_id: id,
-              station_id: s.id,
+              partner_id: s.id,
               priority: i + 1,
+              status: i === 0 ? 'ACTIVATED' : 'PENDING',
             })) as never
           );
           setOrder((prev) => (prev && prev.id === id ? { ...prev, backendSynced: true } : prev));
         } catch {
-          /* portal tables not deployed yet — local realtime simulation continues */
+          /* backend PO tables not reachable — local realtime simulation continues */
         }
       })();
 
@@ -252,6 +248,7 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!order?.backendSynced) return;
     const ch = supabase
       .channel(`po-${order.id}`)
+      // Order status changes (PAID → DRIVER_ASSIGNED → IN_TRANSIT → …).
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'purchase_orders', filter: `id=eq.${order.id}` },
@@ -259,40 +256,114 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
           const row = payload.new as Record<string, unknown>;
           const st = String(row.status ?? '').toUpperCase() as POStatus;
           const patch: Partial<ActiveOrder> = {};
-          if (row.podc) patch.podc = String(row.podc);
-          if (row.podc_code) patch.podcCode = String(row.podc_code);
-          if (row.fulfilling_station_id) patch.fulfillingStationId = String(row.fulfilling_station_id);
+          if (row.assigned_driver_id) patch.assignedDriverId = String(row.assigned_driver_id);
           if (PO_STATUS_FLOW.includes(st)) advanceStatus(st, patch);
           else if (Object.keys(patch).length) setOrder((prev) => (prev ? { ...prev, ...patch } : prev));
         }
       )
+      // PODC receipt appears the moment the backend generates the code.
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'podc_codes', filter: `purchase_order_id=eq.${order.id}` },
         (payload) => {
           const row = (payload.new ?? {}) as Record<string, unknown>;
-          if (row.code) {
-            setOrder((prev) =>
-              prev ? { ...prev, podc: String(row.code), podcCode: String(row.full_code ?? prev.podcCode) } : prev
-            );
+          if (row.podc_code) {
+            const full = String(row.podc_code);
+            const digits = full.replace(/\D/g, '').slice(-6) || full;
+            setOrder((prev) => (prev ? { ...prev, podc: digits, podcCode: full } : prev));
+          }
+          if (row.verified_at) advanceStatus('DELIVERY_VERIFIED');
+        }
+      )
+      // 3-station failover: follow whichever partner gets activated.
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'purchase_order_fulfilment_options',
+          filter: `purchase_order_id=eq.${order.id}`,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          const st = String(row.status ?? '').toUpperCase();
+          if (st !== 'ACTIVATED' && !row.activated_at) return;
+          const partnerId = String(row.partner_id ?? '');
+          if (!partnerId) return;
+          setOrder((prev) => {
+            if (!prev || prev.fulfillingStationId === partnerId) return prev;
+            const station = prev.priorityStations.find((s) => s.id === partnerId);
+            if (station && prev.fulfillingStationId) {
+              toast({
+                title: 'Trying your next station',
+                description: `${station.name} is now fulfilling your order.`,
+              });
+            }
+            return { ...prev, fulfillingStationId: partnerId };
+          });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [order?.backendSynced, order?.id, advanceStatus, toast]);
+
+  // Fetch the rider profile once the backend assigns a driver.
+  useEffect(() => {
+    const driverId = order?.assignedDriverId;
+    if (!order?.backendSynced || !driverId || order.rider?.id === driverId) return;
+    void (async () => {
+      const { data } = await supabase
+        .from('riders' as never)
+        .select('*')
+        .eq('id', driverId)
+        .maybeSingle();
+      const r = data as Record<string, unknown> | null;
+      if (!r) return;
+      const rider: OrderRider = {
+        id: driverId,
+        name: String(r.full_name ?? r.name ?? 'Your rider'),
+        phone: String(r.phone ?? ''),
+        vehicle: String(r.vehicle ?? r.vehicle_type ?? 'Delivery vehicle'),
+        rating: Number(r.rating ?? 5),
+      };
+      setOrder((prev) => (prev && prev.assignedDriverId === driverId ? { ...prev, rider } : prev));
+      if (r.current_latitude && r.current_longitude) {
+        setRiderPos({ lat: Number(r.current_latitude), lng: Number(r.current_longitude) });
+      }
+    })();
+  }, [order?.backendSynced, order?.assignedDriverId, order?.rider?.id]);
+
+  // Live rider location — subscribe once a driver is assigned.
+  useEffect(() => {
+    const riderId = order?.rider?.id ?? order?.assignedDriverId;
+    if (!order?.backendSynced || !riderId) return;
+    const chRiders = supabase
+      .channel(`po-rider-${riderId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'riders', filter: `id=eq.${riderId}` },
+        (payload) => {
+          const r = payload.new as Record<string, unknown>;
+          if (r.current_latitude && r.current_longitude) {
+            setRiderPos({ lat: Number(r.current_latitude), lng: Number(r.current_longitude) });
           }
         }
       )
       .subscribe();
-    const chRiders = supabase
-      .channel('po-riders')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'riders' }, (payload) => {
-        const r = payload.new as Record<string, unknown>;
-        if (r.current_latitude && r.current_longitude) {
-          setRiderPos({ lat: Number(r.current_latitude), lng: Number(r.current_longitude) });
-        }
-      })
-      .subscribe();
     return () => {
-      supabase.removeChannel(ch);
       supabase.removeChannel(chRiders);
     };
-  }, [order?.backendSynced, order?.id, advanceStatus]);
+  }, [order?.backendSynced, order?.rider?.id, order?.assignedDriverId]);
+
+  // ETA from live rider position when backend-synced (recomputed on each update).
+  useEffect(() => {
+    if (!order?.backendSynced || !riderPos) return;
+    const km = haversineKm(riderPos, order.destination);
+    setEtaMinutes(Math.max(1, Math.round(km * 3)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riderPos, order?.backendSynced]);
 
   // Local realtime simulation when the portal tables aren't live yet.
   useEffect(() => {
@@ -327,7 +398,12 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
         advanceStatus('IN_TRANSIT', { podc: digits, podcCode });
         void supabase
           .from('podc_codes' as never)
-          .insert({ purchase_order_id: order.id, code: digits, full_code: podcCode } as never)
+          .insert({
+            purchase_order_id: order.id,
+            customer_id: userId,
+            podc_code: podcCode,
+            status: 'ACTIVE',
+          } as never)
           .then(() => undefined, () => undefined);
       }, 5000);
     } else if (order.status === 'IN_TRANSIT') {
@@ -362,7 +438,11 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
       advanceStatus('PODC_SUBMITTED');
       void supabase
         .from('podc_codes' as never)
-        .update({ verified_at: new Date().toISOString() } as never)
+        .update({
+          status: 'VERIFIED',
+          submitted_at: new Date().toISOString(),
+          verified_at: new Date().toISOString(),
+        } as never)
         .eq('purchase_order_id', order.id)
         .then(() => undefined, () => undefined);
       window.setTimeout(() => advanceStatus('DELIVERY_VERIFIED'), 1200);
