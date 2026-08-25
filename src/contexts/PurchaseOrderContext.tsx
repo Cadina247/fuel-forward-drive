@@ -9,6 +9,7 @@ import React, {
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { haversineKm } from '@/hooks/useNearbyStations';
 import {
   PO_STATUS_FLOW,
   POStatus,
@@ -397,7 +398,12 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
         advanceStatus('IN_TRANSIT', { podc: digits, podcCode });
         void supabase
           .from('podc_codes' as never)
-          .insert({ purchase_order_id: order.id, code: digits, full_code: podcCode } as never)
+          .insert({
+            purchase_order_id: order.id,
+            customer_id: userId,
+            podc_code: podcCode,
+            status: 'ACTIVE',
+          } as never)
           .then(() => undefined, () => undefined);
       }, 5000);
     } else if (order.status === 'IN_TRANSIT') {
@@ -432,7 +438,11 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
       advanceStatus('PODC_SUBMITTED');
       void supabase
         .from('podc_codes' as never)
-        .update({ verified_at: new Date().toISOString() } as never)
+        .update({
+          status: 'VERIFIED',
+          submitted_at: new Date().toISOString(),
+          verified_at: new Date().toISOString(),
+        } as never)
         .eq('purchase_order_id', order.id)
         .then(() => undefined, () => undefined);
       window.setTimeout(() => advanceStatus('DELIVERY_VERIFIED'), 1200);
