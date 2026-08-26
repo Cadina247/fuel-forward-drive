@@ -325,7 +325,7 @@ export const PurchaseOrderProvider: React.FC<{ children: React.ReactNode }> = ({
         id: driverId,
         name: String(r.full_name ?? r.name ?? 'Your rider'),
         phone: String(r.phone ?? ''),
-        vehicle: String(r.vehicle ?? r.vehicle_type ?? 'Delivery vehicle'),
+        vehicle: [r.vehicle_type, r.vehicle_plate].filter(Boolean).join(' · ') || 'Delivery vehicle',
         rating: Number(r.rating ?? 5),
       };
       setOrder((prev) => (prev && prev.assignedDriverId === driverId ? { ...prev, rider } : prev));
