@@ -84,7 +84,13 @@ const AuthScreen: React.FC = () => {
 
 
   const fail = (title: string, err: any) =>
-    toast({ title, description: err?.message || 'Please try again', variant: 'destructive' })
+    toast({
+      title,
+      description:
+        err?.message || err?.msg || err?.error_description ||
+        (typeof err === 'string' ? err : null) || 'Please try again',
+      variant: 'destructive',
+    })
 
   const onEmailSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
